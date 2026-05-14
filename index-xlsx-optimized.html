@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Behavior School Data Tool - XLSX Optimized</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --light-bg: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p { font-size: 1.1rem; color: var(--text-secondary); }
+
+        .upload-area {
+            background: white;
+            border: 3px dashed var(--primary-color);
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+            transform: translateY(-5px);
+        }
+        .upload-area h2 { margin-bottom: 15px; color: var(--text-primary); }
+        .upload-area p { margin: 10px 0; color: var(--text-secondary); }
+        .file-formats { font-size: 0.9rem; color: var(--primary-color); font-weight: 500; }
+        #fileInput { display: none; }
+
+        .error { background: var(--danger-color); color: white; padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; }
+        .dashboard { display: none; }
+        .dashboard.active { display: block; }
+
+        .clear-button, .print-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .clear-button:hover, .print-btn:hover { background-color: #2563eb; }
+
+        .dashboard-header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .dashboard-header h2 { font-size: 2rem; margin-bottom: 5px; }
+        .dashboard-header .location { color: var(--text-secondary); }
+
+        .metric-toggle {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .metric-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .metric-toggle input[type="radio"] { cursor: pointer; }
+        .metric-toggle label:hover { background: var(--light-bg); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            min-height: 400px;
+        }
+        .chart-title { font-size: 1.1rem; margin-bottom: 20px; color: var(--text-primary); }
+
+        .data-quality {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .data-quality h3 { color: var(--text-primary); margin-bottom: 15px; }
+        .data-quality-item {
+            padding: 10px;
+            border-left: 4px solid var(--warning-color);
+            background: rgba(245, 158, 11, 0.05);
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .empty-message {
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        @page { size: 8.5in 11in; margin: 0.5in; }
+        @media print {
+            body { background: white; }
+            .header, .clear-button, .metric-toggle, .upload-area {
+                display: none !important;
+            }
+            .dashboard { margin: 0; padding: 0; }
+            .chart-container, .data-quality { break-inside: avoid; margin-bottom: 20px; }
+        }
+
+        @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Behavior School Data Tool (XLSX)</h1>
+            <p>Multi-month analysis • Dynamic tracking • No data saved</p>
+        </div>
+
+        <div id="uploadSection">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <h2>📁 Upload Behavior Tracking File</h2>
+                <p>Click to select or drag and drop your .xlsx file</p>
+                <p class="file-formats">Supports multi-month xlsx with repeating day blocks</p>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+        </div>
+
+        <div id="messageArea"></div>
+
+        <div id="dashboard" class="dashboard">
+            <button class="clear-button" onclick="clearData()">← Load Different File</button>
+
+            <div class="dashboard-header">
+                <div>
+                    <h2 id="studentName"></h2>
+                    <p class="location" id="studentLocation"></p>
+                </div>
+                <div>
+                    <p><strong>Total Days:</strong> <span id="dayCount">0</span></p>
+                    <p><strong>Date Range:</strong> <span id="dateRange">-</span></p>
+                </div>
+            </div>
+
+            <div class="metric-toggle">
+                <strong>Display metric:</strong>
+                <label>
+                    <input type="radio" name="metric" value="percentage" checked onchange="refreshCharts()">
+                    <span>Percentage (%)</span>
+                </label>
+                <label>
+                    <input type="radio" name="metric" value="raw" onchange="refreshCharts()">
+                    <span>Raw Points</span>
+                </label>
+            </div>
+
+            <div class="data-quality" id="dataQualityPanel" style="display: none;">
+                <h3>⚠️ Data Quality Issues</h3>
+                <div id="dataQualityList"></div>
+            </div>
+
+            <div class="charts-grid" id="chartsGrid">
+                <div class="chart-container">
+                    <h3 class="chart-title">📈 Behavior Categories Over Time</h3>
+                    <canvas id="categoryTrend"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">📊 Category Performance</h3>
+                    <canvas id="categoryPerformance"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
+                    <canvas id="timeOfDay"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">🎯 BIP Goals Tracking</h3>
+                    <canvas id="bipGoals"></canvas>
+                </div>
+            </div>
+
+            <div id="customTrackingCharts"></div>
+        </div>
+    </div>
+
+    <script>
+        let studentData = null;
+        let rawData = null;
+        let charts = {};
+        const metricValues = { percentage: 'percentage', raw: 'raw' };
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showMessage('Processing file...', 'loading');
+            try {
+                const data = await parseXlsxFile(file);
+                studentData = data;
+                initializeDashboard();
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('dashboard').classList.add('active');
+                showMessage('File loaded successfully!', 'success');
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function parseXlsxFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                        const parsed = parseMultiSheetXlsx(workbook);
+                        resolve(parsed);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        function parseMultiSheetXlsx(workbook) {
+            const sheetNames = workbook.SheetNames;
+            const dataSheets = [];
+            let studentName = 'Unknown';
+            let studentLocation = 'Unknown';
+            const allDays = [];
+            const dataQualityIssues = [];
+
+            for (const sheetName of sheetNames) {
+                if (sheetName === 'Master' || sheetName === 'Overall Summary') continue;
+
+                const worksheet = workbook.Sheets[sheetName];
+                const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                if (sheetData.length < 5) continue;
+
+                // Extract student name from row 1
+                if (sheetData[0] && sheetData[0][0]) {
+                    studentName = sheetData[0][0];
+                }
+
+                // Parse repeating day blocks (23 rows per block)
+                let i = 4; // Start after header rows
+                while (i < sheetData.length) {
+                    const row = sheetData[i];
+                    if (!row || !row[0]) {
+                        i++;
+                        continue;
+                    }
+
+                    const firstCell = row[0];
+                    if (!(firstCell instanceof Date)) {
+                        i++;
+                        continue;
+                    }
+
+                    // Found a date block - parse the 23-row block
+                    let date = new Date(firstCell);
+
+                    // Auto-correct bad dates
+                    const sheetMonth = parseMonthFromSheetName(sheetName);
+                    if (sheetMonth !== null && date.getMonth() !== sheetMonth) {
+                        date.setMonth(sheetMonth);
+                        dataQualityIssues.push(`Auto-corrected date on ${sheetName} sheet row ${i + 1} from month ${date.getMonth() + 1} to ${sheetMonth + 1}`);
+                    }
+
+                    const dayBlock = parseDayBlock(sheetData, i, sheetName);
+                    if (dayBlock) {
+                        dayBlock.date = date;
+                        allDays.push(dayBlock);
+                    }
+
+                    i += 23;
+                }
+            }
+
+            allDays.sort((a, b) => a.date - b.date);
+
+            return {
+                name: studentName,
+                location: studentLocation,
+                days: allDays,
+                dataQualityIssues,
+                dateRange: {
+                    start: allDays.length > 0 ? allDays[0].date : new Date(),
+                    end: allDays.length > 0 ? allDays[allDays.length - 1].date : new Date()
+                }
+            };
+        }
+
+        function parseMonthFromSheetName(name) {
+            const months = {
+                'January': 0, 'Jan': 0,
+                'February': 1, 'Feb': 1,
+                'March': 2, 'Mar': 2,
+                'April': 3, 'Apr': 3,
+                'May': 4,
+                'June': 5, 'Jun': 5,
+                'July': 6, 'Jul': 7,
+                'August': 7, 'Aug': 7,
+                'September': 8, 'Sep': 8, 'Septemb': 8,
+                'October': 9, 'Oct': 9,
+                'November': 10, 'Nov': 10,
+                'December': 11, 'Dec': 11
+            };
+            return months[name] !== undefined ? months[name] : null;
+        }
+
+        function parseDayBlock(sheetData, startRow, sheetName) {
+            const block = {
+                categories: {},
+                additionalTracking: {},
+                bipGoals: [],
+                timeSlotScores: []
+            };
+
+            if (startRow + 22 >= sheetData.length) return null;
+
+            const dateRow = sheetData[startRow];
+            const categoryRows = {
+                'Complete Work': sheetData[startRow + 1],
+                'Hands, Body, Objects to self': sheetData[startRow + 2],
+                'Stay in Designated area': sheetData[startRow + 3],
+                'App. language/conversations': sheetData[startRow + 4] || sheetData[startRow + 4]
+            };
+
+            // Parse each category (cols 1-25 are time slots)
+            for (const [catName, catRow] of Object.entries(categoryRows)) {
+                if (!catRow) continue;
+                const slots = [];
+                let total = 0;
+                for (let j = 1; j <= 25; j++) {
+                    const v = parseFloat(catRow[j]) || 0;
+                    slots.push(v);
+                    total += v;
+                }
+                block.categories[catName] = {
+                    slots,
+                    total,
+                    percentage: (total / 25) * 100
+                };
+            }
+
+            // Parse additional tracking (col 26)
+            if (sheetData[startRow + 7]) block.additionalTracking['Sleeping (min)'] = parseFloat(sheetData[startRow + 7][26]) || 0;
+            if (sheetData[startRow + 8]) block.additionalTracking['Arguing'] = parseFloat(sheetData[startRow + 8][26]) || 0;
+            if (sheetData[startRow + 9]) block.additionalTracking['Custom'] = parseFloat(sheetData[startRow + 9][26]) || 0;
+
+            // Parse BIP Goals (dynamic - look for "BIP Goal:" rows)
+            for (let j = 10; j < startRow + 22; j++) {
+                const row = sheetData[j];
+                if (row && row[0] && (row[0].includes('BIP') || row[0].includes('BIP Behavior'))) {
+                    const goalName = row[0].trim();
+                    const goal = { name: goalName };
+
+                    // Next 3 rows should be Frequency, Duration, Intensity
+                    if (j + 3 < sheetData.length) {
+                        if (sheetData[j + 1]) goal.frequency = parseFloat(sheetData[j + 1][26]) || 0;
+                        if (sheetData[j + 2]) goal.duration = parseFloat(sheetData[j + 2][26]) || 0;
+                        if (sheetData[j + 3]) goal.intensity = parseFloat(sheetData[j + 3][26]) || 0;
+                    }
+                    if (goal.frequency !== undefined) {
+                        block.bipGoals.push(goal);
+                    }
+                }
+            }
+
+            return block;
+        }
+
+        function initializeDashboard() {
+            document.getElementById('studentName').textContent = studentData.name;
+            document.getElementById('studentLocation').textContent = studentData.location;
+            document.getElementById('dayCount').textContent = studentData.days.length;
+            document.getElementById('dateRange').textContent =
+                `${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}`;
+
+            if (studentData.dataQualityIssues.length > 0) {
+                const panel = document.getElementById('dataQualityPanel');
+                const list = document.getElementById('dataQualityList');
+                list.innerHTML = studentData.dataQualityIssues.map(issue =>
+                    `<div class="data-quality-item">✓ ${issue}</div>`
+                ).join('');
+                panel.style.display = 'block';
+            }
+
+            // Build dynamic custom tracking and BIP charts
+            buildDynamicCharts();
+            refreshCharts();
+        }
+
+        function buildDynamicCharts() {
+            const customTrackingCharts = document.getElementById('customTrackingCharts');
+            customTrackingCharts.innerHTML = '';
+
+            // Detect what custom tracking exists
+            const trackingTypes = new Set();
+            const bipGoalNames = new Set();
+
+            studentData.days.forEach(day => {
+                Object.keys(day.additionalTracking).forEach(key => trackingTypes.add(key));
+                day.bipGoals.forEach(goal => bipGoalNames.add(goal.name));
+            });
+
+            // Add charts for each
+            let html = '';
+            trackingTypes.forEach(tracking => {
+                if (tracking === 'Custom') return; // Generic, skip
+                html += `
+                    <div class="chart-container" style="margin-bottom: 20px;">
+                        <h3 class="chart-title">📊 ${tracking}</h3>
+                        <canvas id="tracking-${tracking.replace(/\s+/g, '-')}"></canvas>
+                    </div>
+                `;
+            });
+
+            bipGoalNames.forEach(goal => {
+                html += `
+                    <div class="chart-container" style="margin-bottom: 20px;">
+                        <h3 class="chart-title">🎯 ${goal}</h3>
+                        <canvas id="bip-${goal.replace(/\s+/g, '-')}"></canvas>
+                    </div>
+                `;
+            });
+
+            if (html) {
+                customTrackingCharts.innerHTML = html;
+            }
+        }
+
+        function refreshCharts() {
+            // Update all charts based on selected metric
+            const metric = document.querySelector('input[name="metric"]:checked').value;
+            updateCategoryTrendChart(metric);
+            updateCategoryPerformanceChart(metric);
+            updateTimeOfDayChart(metric);
+            updateBipGoalsChart();
+        }
+
+        function updateCategoryTrendChart(metric) {
+            const ctx = document.getElementById('categoryTrend').getContext('2d');
+            if (charts.categoryTrend) charts.categoryTrend.destroy();
+
+            const categories = Object.keys(studentData.days[0].categories);
+            const datasets = categories.map((cat, idx) => {
+                const data = studentData.days.map(day => {
+                    const catData = day.categories[cat];
+                    return metric === 'percentage' ? catData.percentage : catData.total;
+                });
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+                return {
+                    label: cat,
+                    data,
+                    borderColor: colors[idx],
+                    backgroundColor: colors[idx] + '20',
+                    tension: 0.4,
+                    fill: false,
+                    borderWidth: 2
+                };
+            });
+
+            charts.categoryTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: studentData.days.map(d => d.date.toLocaleDateString()),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                }
+            });
+        }
+
+        function updateCategoryPerformanceChart(metric) {
+            const ctx = document.getElementById('categoryPerformance').getContext('2d');
+            if (charts.categoryPerformance) charts.categoryPerformance.destroy();
+
+            const categories = Object.keys(studentData.days[0].categories);
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+            const avgData = categories.map(cat => {
+                const sum = studentData.days.reduce((s, day) => {
+                    const catData = day.categories[cat];
+                    return s + (metric === 'percentage' ? catData.percentage : catData.total);
+                }, 0);
+                return sum / studentData.days.length;
+            });
+
+            charts.categoryPerformance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: metric === 'percentage' ? 'Average %' : 'Average Points',
+                        data: avgData,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                }
+            });
+        }
+
+        function updateTimeOfDayChart(metric) {
+            const ctx = document.getElementById('timeOfDay').getContext('2d');
+            if (charts.timeOfDay) charts.timeOfDay.destroy();
+
+            const timeSlots = 25;
+            const avgPerSlot = [];
+            for (let slot = 0; slot < timeSlots; slot++) {
+                let sum = 0;
+                studentData.days.forEach(day => {
+                    Object.values(day.categories).forEach(catData => {
+                        sum += catData.slots[slot] || 0;
+                    });
+                });
+                avgPerSlot.push(sum / (studentData.days.length * 4)); // 4 categories
+            }
+
+            const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
+
+            charts.timeOfDay = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: slotLabels,
+                    datasets: [{
+                        label: 'Avg Behavior',
+                        data: avgPerSlot,
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateBipGoalsChart() {
+            const ctx = document.getElementById('bipGoals').getContext('2d');
+            if (charts.bipGoals) charts.bipGoals.destroy();
+
+            const bipNames = new Set();
+            studentData.days.forEach(day => {
+                day.bipGoals.forEach(goal => bipNames.add(goal.name));
+            });
+
+            if (bipNames.size === 0) return;
+
+            const datasets = Array.from(bipNames).map((goalName, idx) => {
+                const data = studentData.days.map(day => {
+                    const goal = day.bipGoals.find(g => g.name === goalName);
+                    return goal ? goal.frequency : 0;
+                });
+                const colors = ['#ef4444', '#f59e0b', '#10b981'];
+                return {
+                    label: goalName,
+                    data,
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length] + '20',
+                    tension: 0.4,
+                    fill: false
+                };
+            });
+
+            charts.bipGoals = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: studentData.days.map(d => d.date.toLocaleDateString()),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function showMessage(message, type) {
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'error' : type === 'success' ? 'error' : 'loading';
+            if (type === 'success') div.style.background = '#10b981';
+            div.textContent = message;
+            document.getElementById('messageArea').innerHTML = '';
+            document.getElementById('messageArea').appendChild(div);
+            if (type === 'error' || type === 'success') {
+                setTimeout(() => div.remove(), 5000);
+            }
+        }
+
+        function clearData() {
+            studentData = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('messageArea').innerHTML = '';
+            Object.values(charts).forEach(c => c?.destroy?.());
+            charts = {};
+        }
+
+        window.addEventListener('beforeunload', (e) => {
+            if (studentData) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>
