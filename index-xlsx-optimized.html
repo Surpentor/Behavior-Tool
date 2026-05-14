@@ -585,6 +585,12 @@
                 <div id="timeofday" class="tab-content">
                     <div class="controls-panel">
                         <div class="control-group">
+                            <label><strong>Behavior category:</strong></label>
+                            <select id="todCategorySelect" onchange="refreshCharts()" style="margin-top: 8px; width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; font-family: inherit; background: white;">
+                                <option value="__all__">All Categories (averaged)</option>
+                            </select>
+                        </div>
+                        <div class="control-group" style="margin-top: 14px;">
                             <strong>Display metric:</strong>
                             <div class="metric-toggle" style="margin-top: 10px;">
                                 <label>
@@ -1158,6 +1164,13 @@
                 studentData.days.map((day, idx) =>
                     `<option value="${idx}">${day.date.toLocaleDateString()}</option>`
                 ).join('');
+
+            // Populate Time-of-Day category selector
+            const todSelect = document.getElementById('todCategorySelect');
+            if (todSelect) {
+                todSelect.innerHTML = '<option value="__all__">All Categories (averaged)</option>' +
+                    allCategoryNames.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            }
 
             // Setup date range filter
             document.getElementById('filterStartDate').value = dateToInputValue(studentData.dateRange.start);
@@ -1775,39 +1788,75 @@
             if (charts.timeOfDay) charts.timeOfDay.destroy();
 
             const days = filteredDays || studentData.days;
+            const selectedCat = document.getElementById('todCategorySelect')?.value || '__all__';
             const timeSlots = 25;
-            const avgPerSlot = [];
-            for (let slot = 0; slot < timeSlots; slot++) {
-                let sum = 0;
-                let count = 0;
-                days.forEach(day => {
-                    if (day.categories) {
-                        Object.entries(day.categories).forEach(([catName, catData]) => {
-                            if (enabledCategories.has(catName) && catData && catData.slots && catData.slots[slot] !== undefined) {
-                                sum += catData.slots[slot] || 0;
+
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+
+            let datasets;
+            if (selectedCat === '__all__') {
+                // One dataset per category so the user can see each line separately
+                const catsToShow = allCategoryNames.filter(c => enabledCategories.has(c));
+                datasets = catsToShow.map((cat, idx) => {
+                    const avgPerSlot = [];
+                    for (let slot = 0; slot < timeSlots; slot++) {
+                        let sum = 0, count = 0;
+                        days.forEach(day => {
+                            const cd = day.categories && day.categories[cat];
+                            if (cd && cd.slots && cd.slots[slot] !== undefined) {
+                                sum += metric === 'percentage' ? (cd.slots[slot] / 1) : cd.slots[slot];
                                 count++;
                             }
                         });
+                        avgPerSlot.push(count > 0 ? sum / count : 0);
                     }
+                    return {
+                        label: cat,
+                        data: avgPerSlot,
+                        backgroundColor: colors[idx % colors.length] + 'cc',
+                        borderColor: colors[idx % colors.length],
+                        borderWidth: 1
+                    };
                 });
-                avgPerSlot.push(count > 0 ? sum / count : 0);
+            } else {
+                const avgPerSlot = [];
+                for (let slot = 0; slot < timeSlots; slot++) {
+                    let sum = 0, count = 0;
+                    days.forEach(day => {
+                        const cd = day.categories && day.categories[selectedCat];
+                        if (cd && cd.slots && cd.slots[slot] !== undefined) {
+                            sum += cd.slots[slot] || 0;
+                            count++;
+                        }
+                    });
+                    avgPerSlot.push(count > 0 ? sum / count : 0);
+                }
+                datasets = [{
+                    label: selectedCat,
+                    data: avgPerSlot,
+                    backgroundColor: '#3b82f6cc',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1
+                }];
             }
 
-            const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
+            const chartTitle = document.querySelector('#timeofday .chart-title');
+            if (chartTitle) {
+                chartTitle.textContent = selectedCat === '__all__'
+                    ? '⏰ Time-of-Day Patterns — All Categories'
+                    : `⏰ Time-of-Day Patterns — ${selectedCat}`;
+            }
 
             charts.timeOfDay = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: slotLabels,
-                    datasets: [{
-                        label: 'Avg Behavior',
-                        data: avgPerSlot,
-                        backgroundColor: '#3b82f6'
-                    }]
+                    labels: SLOT_LABELS,
+                    datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
                     scales: { y: { beginAtZero: true } }
                 }
             });
