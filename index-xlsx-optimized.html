@@ -1837,6 +1837,8 @@
             const canvas = document.getElementById('timeOfDay');
             if (!canvas) return;
             if (charts.timeOfDay) charts.timeOfDay.destroy();
+            // Clean up any previous BIP time-of-day charts
+            ['tod-bip-0', 'tod-bip-1', 'tod-bip-2'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
 
             const days = filteredDays || studentData.days;
             const sel = document.getElementById('todCategorySelect')?.value || '__all__';
@@ -1852,6 +1854,52 @@
                 }
                 return result;
             };
+
+            const mainArea = document.getElementById('todMainChart');
+            const bipArea = document.getElementById('todBipCharts');
+
+            // BIP goals get their own section with 3 separate charts
+            if (sel.startsWith('bip:')) {
+                mainArea.style.display = 'none';
+                const bipName = sel.slice(4);
+                const metrics = [
+                    { key: 'freqSlots', label: 'Frequency', color: '#ef4444' },
+                    { key: 'durSlots',  label: 'Duration',  color: '#f59e0b' },
+                    { key: 'intenSlots', label: 'Intensity', color: '#10b981' }
+                ];
+
+                let html = '<div class="charts-grid">';
+                metrics.forEach((m, idx) => {
+                    html += `<div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">⏰ ${bipName} — ${m.label}</h3>
+                            <button class="chart-print-btn" onclick="printChart('tod-bip-${idx}')">Print</button>
+                        </div>
+                        <canvas id="tod-bip-${idx}"></canvas>
+                    </div>`;
+                });
+                html += '</div>';
+                bipArea.innerHTML = html;
+                bipArea.style.display = 'block';
+
+                metrics.forEach((m, idx) => {
+                    const canvasId = 'tod-bip-' + idx;
+                    const chartKey = 'tod-bip-' + idx;
+                    if (charts[chartKey]) charts[chartKey].destroy();
+                    const rawData = avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g[m.key][slot] || 0) : null; });
+                    const data = rawData.map(v => Math.round(v));
+                    charts[chartKey] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: SLOT_LABELS, datasets: [{ label: m.label, data, backgroundColor: m.color + 'cc', borderColor: m.color, borderWidth: 1 }] },
+                        options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                    });
+                });
+                return;
+            }
+
+            // All other selections use the main chart area
+            mainArea.style.display = '';
+            bipArea.style.display = 'none';
 
             let datasets, label;
 
@@ -1885,22 +1933,9 @@
                     backgroundColor: '#8b5cf6cc', borderColor: '#8b5cf6', borderWidth: 1
                 }];
                 label = meta ? meta.label : ('Tracking ' + trkSlot);
-            } else if (sel.startsWith('bip:')) {
-                const bipName = sel.slice(4);
-                const metrics = [
-                    { key: 'freqSlots', label: 'Frequency', color: '#ef4444' },
-                    { key: 'durSlots',  label: 'Duration',  color: '#f59e0b' },
-                    { key: 'intenSlots', label: 'Intensity', color: '#10b981' }
-                ];
-                datasets = metrics.map(m => ({
-                    label: m.label,
-                    data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g[m.key][slot] || 0) : null; }),
-                    backgroundColor: m.color + 'cc', borderColor: m.color, borderWidth: 1
-                }));
-                label = bipName;
             }
 
-            const chartTitle = document.querySelector('#timeofday .chart-title');
+            const chartTitle = document.querySelector('#todChartTitle');
             if (chartTitle) chartTitle.textContent = `⏰ Time-of-Day Patterns — ${label}`;
 
             charts.timeOfDay = new Chart(canvas.getContext('2d'), {
@@ -1933,12 +1968,15 @@
                 const data = days.map(day => {
                     const goal = day.bipGoals.find(g => g.name === goalName);
                     if (!goal) return 0;
-                    switch (metric) {
-                        case 'frequency': return goal.frequency;
-                        case 'duration': return goal.duration;
-                        case 'intensity': return goal.intensity;
-                        default: return goal.frequency;
-                    }
+                    const val = (() => {
+                        switch (metric) {
+                            case 'frequency': return goal.frequency;
+                            case 'duration': return goal.duration;
+                            case 'intensity': return goal.intensity;
+                            default: return goal.frequency;
+                        }
+                    })();
+                    return Math.round(val);
                 });
                 const colors = ['#ef4444', '#f59e0b', '#10b981'];
                 return {
@@ -1962,7 +2000,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
                 }
             });
         }
@@ -2020,9 +2058,9 @@
                 const freq = [], dur = [], inten = [];
                 days.forEach(day => {
                     const goal = day.bipGoals.find(g => g.name === name);
-                    freq.push(goal ? goal.frequency : 0);
-                    dur.push(goal ? goal.duration : 0);
-                    inten.push(goal ? goal.intensity : 0);
+                    freq.push(goal ? Math.round(goal.frequency) : 0);
+                    dur.push(goal ? Math.round(goal.duration) : 0);
+                    inten.push(goal ? Math.round(goal.intensity) : 0);
                 });
 
                 charts[key] = new Chart(canvas.getContext('2d'), {
@@ -2039,7 +2077,7 @@
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: { legend: { position: 'top' } },
-                        scales: { y: { beginAtZero: true } }
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
                     }
                 });
             });
@@ -2135,7 +2173,7 @@
                 const sh = half > 0 ? vals.slice(half).reduce((s, v) => s + v, 0) / (vals.length - half) : avg;
                 const diff = sh - fh;
                 return {
-                    name, avg: Math.round(avg * 10) / 10,
+                    name, avg: Math.round(avg),
                     trendClass: diff < -0.5 ? 'trend-up' : diff > 0.5 ? 'trend-down' : 'trend-flat',
                     trendLabel: diff < -0.5 ? '↓ Reducing' : diff > 0.5 ? '↑ Increasing' : '→ Stable'
                 };
@@ -2483,7 +2521,7 @@
             document.getElementById('uploadSection').style.display = 'block';
             document.getElementById('dashboard').classList.remove('active');
             document.getElementById('messageArea').innerHTML = '';
-            Object.values(charts).forEach(c => c?.destroy?.());
+            Object.keys(charts).forEach(k => charts[k]?.destroy?.());
             charts = {};
         }
 
