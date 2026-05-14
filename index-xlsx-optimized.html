@@ -422,16 +422,21 @@
             border-radius: 8px;
             background: white;
         }
+        /* Give summary tab full-bleed so the table can use all available space */
+        #summary.tab-content { padding: 20px 12px; }
         .summary-table {
             border-collapse: collapse;
             width: 100%;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
+            table-layout: auto;
         }
         .summary-table th, .summary-table td {
             border: 1px solid var(--border-color);
-            padding: 6px 10px;
+            padding: 4px 6px;
             text-align: right;
-            white-space: nowrap;
+            white-space: normal;
+            max-width: 110px;
+            word-break: break-word;
         }
         .summary-table thead th {
             background: var(--light-bg);
@@ -439,6 +444,7 @@
             position: sticky;
             top: 0;
             font-weight: 600;
+            vertical-align: bottom;
         }
         .summary-table th.group-head {
             text-align: center;
@@ -451,6 +457,9 @@
             background: white;
             font-weight: 600;
             z-index: 1;
+            white-space: nowrap;
+            min-width: 80px;
+            max-width: 100px;
         }
         .summary-table thead th.date-col { background: var(--light-bg); z-index: 2; }
         .summary-table tbody tr:nth-child(even) td { background: #f8fafc; }
