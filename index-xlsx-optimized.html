@@ -320,6 +320,52 @@
             color: #1e40af;
             font-size: 0.95rem;
         }
+
+        .summary-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+        }
+        .summary-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .summary-table thead th {
+            background: var(--light-bg);
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+        .summary-table th.group-head {
+            text-align: center;
+            background: #eef2ff;
+        }
+        .summary-table td.date-col, .summary-table th.date-col {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .summary-table thead th.date-col { background: var(--light-bg); z-index: 2; }
+        .summary-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .summary-table tbody tr:nth-child(even) td.date-col { background: #f1f5f9; }
+        .summary-table tr.avg-row td {
+            background: #ecfdf5 !important;
+            font-weight: 700;
+            border-top: 2px solid var(--secondary-color);
+        }
+        .summary-table tr.avg-row td.date-col { background: #d1fae5 !important; }
     </style>
 </head>
 <body>
@@ -370,6 +416,7 @@
                     <button class="tab-button" data-tab="bipgoals">🎯 BIP Goals</button>
                     <button class="tab-button" data-tab="tracking">📊 Custom Tracking</button>
                     <button class="tab-button" data-tab="comparisons">📍 Date Comparison</button>
+                    <button class="tab-button" data-tab="summary">📋 Summary Table</button>
                     <button class="tab-button" data-tab="settings">⚙️ Settings</button>
                 </div>
 
@@ -507,6 +554,36 @@
                             </div>
                             <canvas id="comparisonChart"></canvas>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Summary Table Tab -->
+                <div id="summary" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <strong>Category values:</strong>
+                            <div class="metric-toggle" style="margin-top: 10px;">
+                                <label>
+                                    <input type="radio" name="metric-table" value="percentage" checked onchange="updateSummaryTable()">
+                                    <span>Percentage (%)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="metric-table" value="raw" onchange="updateSummaryTable()">
+                                    <span>Raw Points</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group" style="margin-top: 15px;">
+                            <button class="btn btn-secondary" onclick="exportSummaryCsv()">⬇️ Export CSV</button>
+                            <button class="btn" onclick="printChart('summaryTableWrap', true)">🖨️ Print Table</button>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 10px;">
+                            Showing every day in the current date-range filter. Use the Settings tab to narrow the range.
+                            The bottom row shows averages across the shown days.
+                        </p>
+                    </div>
+                    <div class="summary-table-wrap" id="summaryTableWrap">
+                        <table class="summary-table" id="summaryTable"></table>
                     </div>
                 </div>
 
@@ -1166,6 +1243,141 @@
             updateBipGoalsChart();
             updateTrackingCharts();
             updateIndividualBipCharts();
+            updateSummaryTable();
+        }
+
+        // Build the day-by-day summary table: one row per day in the current
+        // filter, columns for every category, custom tracking metric, and BIP
+        // goal (frequency/duration/intensity), plus an averages row.
+        function summaryColumns() {
+            const cats = allCategoryNames;
+            const tracking = studentData.trackingMeta || [];
+            const bipNames = getBipGoalNames();
+            return { cats, tracking, bipNames };
+        }
+
+        function updateSummaryTable() {
+            const table = document.getElementById('summaryTable');
+            if (!table || !studentData) return;
+
+            const days = filteredDays || studentData.days;
+            const metric = document.querySelector('input[name="metric-table"]:checked')?.value || 'percentage';
+            const { cats, tracking, bipNames } = summaryColumns();
+
+            if (days.length === 0) {
+                table.innerHTML = '<tbody><tr><td>No days in the current date range.</td></tr></tbody>';
+                return;
+            }
+
+            // Header: two rows — group headers, then individual metric headers
+            let groupRow = '<tr><th class="date-col" rowspan="2">Date</th>';
+            groupRow += `<th class="group-head" colspan="${cats.length}">Categories (${metric === 'percentage' ? '%' : 'pts'})</th>`;
+            if (tracking.length) groupRow += `<th class="group-head" colspan="${tracking.length}">Custom Tracking</th>`;
+            bipNames.forEach(name => {
+                groupRow += `<th class="group-head" colspan="3">${escapeHtml(name)}</th>`;
+            });
+            groupRow += '</tr>';
+
+            let metricRow = '<tr>';
+            cats.forEach(c => metricRow += `<th>${escapeHtml(c)}</th>`);
+            tracking.forEach(t => metricRow += `<th>${escapeHtml(t.label)}</th>`);
+            bipNames.forEach(() => metricRow += '<th>Freq</th><th>Dur</th><th>Inten</th>');
+            metricRow += '</tr>';
+
+            // Body rows + running sums for the averages row
+            const sums = {};
+            const fmt = v => (Math.round(v * 10) / 10).toString();
+            let body = '';
+            days.forEach(day => {
+                let row = `<td class="date-col">${day.date.toLocaleDateString()}</td>`;
+                cats.forEach(c => {
+                    const cd = day.categories && day.categories[c];
+                    const v = cd ? (metric === 'percentage' ? cd.percentage : cd.total) : 0;
+                    sums['cat:' + c] = (sums['cat:' + c] || 0) + v;
+                    row += `<td>${cd ? fmt(v) : '—'}</td>`;
+                });
+                tracking.forEach(t => {
+                    const td = day.tracking && day.tracking[t.slot];
+                    const v = td ? (td.value || 0) : 0;
+                    sums['trk:' + t.slot] = (sums['trk:' + t.slot] || 0) + v;
+                    row += `<td>${fmt(v)}</td>`;
+                });
+                bipNames.forEach(name => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    const f = g ? g.frequency : 0, d = g ? g.duration : 0, it = g ? g.intensity : 0;
+                    sums['bipF:' + name] = (sums['bipF:' + name] || 0) + f;
+                    sums['bipD:' + name] = (sums['bipD:' + name] || 0) + d;
+                    sums['bipI:' + name] = (sums['bipI:' + name] || 0) + it;
+                    row += `<td>${fmt(f)}</td><td>${fmt(d)}</td><td>${fmt(it)}</td>`;
+                });
+                body += `<tr>${row}</tr>`;
+            });
+
+            // Averages row
+            const n = days.length;
+            let avg = `<td class="date-col">Average (${n} days)</td>`;
+            cats.forEach(c => avg += `<td>${fmt((sums['cat:' + c] || 0) / n)}</td>`);
+            tracking.forEach(t => avg += `<td>${fmt((sums['trk:' + t.slot] || 0) / n)}</td>`);
+            bipNames.forEach(name => {
+                avg += `<td>${fmt((sums['bipF:' + name] || 0) / n)}</td>`;
+                avg += `<td>${fmt((sums['bipD:' + name] || 0) / n)}</td>`;
+                avg += `<td>${fmt((sums['bipI:' + name] || 0) / n)}</td>`;
+            });
+
+            table.innerHTML =
+                `<thead>${groupRow}${metricRow}</thead>` +
+                `<tbody>${body}<tr class="avg-row">${avg}</tr></tbody>`;
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function exportSummaryCsv() {
+            if (!studentData) return;
+            const days = filteredDays || studentData.days;
+            const metric = document.querySelector('input[name="metric-table"]:checked')?.value || 'percentage';
+            const { cats, tracking, bipNames } = summaryColumns();
+
+            const header = ['Date'];
+            cats.forEach(c => header.push(`${c} (${metric === 'percentage' ? '%' : 'pts'})`));
+            tracking.forEach(t => header.push(t.label));
+            bipNames.forEach(name => {
+                header.push(`${name} - Freq`, `${name} - Dur`, `${name} - Inten`);
+            });
+
+            const csvCell = v => {
+                const s = String(v);
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            const round = v => Math.round(v * 10) / 10;
+
+            const rows = [header.map(csvCell).join(',')];
+            days.forEach(day => {
+                const cells = [day.date.toLocaleDateString()];
+                cats.forEach(c => {
+                    const cd = day.categories && day.categories[c];
+                    cells.push(cd ? round(metric === 'percentage' ? cd.percentage : cd.total) : '');
+                });
+                tracking.forEach(t => {
+                    const td = day.tracking && day.tracking[t.slot];
+                    cells.push(td ? round(td.value || 0) : 0);
+                });
+                bipNames.forEach(name => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    cells.push(g ? round(g.frequency) : 0, g ? round(g.duration) : 0, g ? round(g.intensity) : 0);
+                });
+                rows.push(cells.map(csvCell).join(','));
+            });
+
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${safeId(studentData.name)}-summary.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         function updateCategoryTrendChart(metric) {
@@ -1430,13 +1642,24 @@
             });
         }
 
-        function printChart(chartId) {
-            const canvas = document.getElementById(chartId);
-            if (!canvas) return;
+        function printChart(elementId, isHtml) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
 
-            const printWindow = window.open('', '', 'width=800,height=600');
-            const img = canvas.toDataURL('image/png');
-            printWindow.document.write(`<img src="${img}" style="width:100%; max-width:800px;"></body>`);
+            const printWindow = window.open('', '', 'width=900,height=600');
+            if (isHtml) {
+                printWindow.document.write(`<html><head><title>${escapeHtml(studentData.name)} — Summary</title><style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    table { border-collapse: collapse; width: 100%; font-size: 11px; }
+                    th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: right; }
+                    th { background: #eee; }
+                    td:first-child, th:first-child { text-align: left; }
+                    tr:last-child td { font-weight: bold; background: #ecfdf5; }
+                </style></head><body><h2>${escapeHtml(studentData.name)} — Summary Table</h2>${el.innerHTML}</body></html>`);
+            } else {
+                const img = el.toDataURL('image/png');
+                printWindow.document.write(`<img src="${img}" style="width:100%; max-width:800px;">`);
+            }
             printWindow.document.close();
             printWindow.focus();
             setTimeout(() => printWindow.print(), 100);
