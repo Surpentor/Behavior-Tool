@@ -594,23 +594,10 @@
                 <div id="timeofday" class="tab-content">
                     <div class="controls-panel">
                         <div class="control-group">
-                            <label><strong>Behavior category:</strong></label>
+                            <label><strong>View by:</strong></label>
                             <select id="todCategorySelect" onchange="refreshCharts()" style="margin-top: 8px; width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; font-family: inherit; background: white;">
                                 <option value="__all__">All Categories (averaged)</option>
                             </select>
-                        </div>
-                        <div class="control-group" style="margin-top: 14px;">
-                            <strong>Display metric:</strong>
-                            <div class="metric-toggle" style="margin-top: 10px;">
-                                <label>
-                                    <input type="radio" name="metric-tod" value="percentage" checked onchange="refreshCharts()">
-                                    <span>Percentage (%)</span>
-                                </label>
-                                <label>
-                                    <input type="radio" name="metric-tod" value="raw" onchange="refreshCharts()">
-                                    <span>Raw Points</span>
-                                </label>
-                            </div>
                         </div>
                     </div>
 
@@ -1597,7 +1584,7 @@
             const metric = document.querySelector('input[name="metric"]:checked')?.value || 'percentage';
             updateCategoryTrendChart(metric);
             updateCategoryPerformanceChart(metric);
-            updateTimeOfDayChart(metric);
+            updateTimeOfDayChart();
             updateBipGoalsChart();
             updateTrackingCharts();
             updateIndividualBipCharts();
@@ -1841,7 +1828,7 @@
             });
         }
 
-        function updateTimeOfDayChart(metric) {
+        function updateTimeOfDayChart() {
             const canvas = document.getElementById('timeOfDay');
             if (!canvas) return;
             if (charts.timeOfDay) charts.timeOfDay.destroy();
@@ -1863,21 +1850,19 @@
                 return result;
             };
 
-            let datasets, label;
+            let datasets, label, yAxisLabel;
 
             if (sel === '__all__') {
                 const catsToShow = allCategoryNames.filter(c => enabledCategories.has(c));
                 datasets = catsToShow.map((cat, idx) => ({
                     label: cat,
-                    data: avgSlots((day, slot) => {
-                        const cd = day.categories && day.categories[cat];
-                        return (cd && cd.slots) ? (cd.slots[slot] || 0) : null;
-                    }),
+                    data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return (cd && cd.slots) ? (cd.slots[slot] || 0) : null; }),
                     backgroundColor: colors[idx % colors.length] + 'cc',
                     borderColor: colors[idx % colors.length],
                     borderWidth: 1
                 }));
                 label = 'All Categories';
+                yAxisLabel = 'Avg score per slot';
             } else if (sel.startsWith('cat:')) {
                 const cat = sel.slice(4);
                 datasets = [{
@@ -1886,6 +1871,7 @@
                     backgroundColor: '#3b82f6cc', borderColor: '#3b82f6', borderWidth: 1
                 }];
                 label = cat;
+                yAxisLabel = 'Avg score per slot';
             } else if (sel.startsWith('trk:')) {
                 const trkSlot = parseInt(sel.slice(4));
                 const meta = (studentData.trackingMeta || []).find(m => m.slot === trkSlot);
@@ -1895,6 +1881,7 @@
                     backgroundColor: '#8b5cf6cc', borderColor: '#8b5cf6', borderWidth: 1
                 }];
                 label = meta ? meta.label : ('Tracking ' + trkSlot);
+                yAxisLabel = label;
             } else if (sel.startsWith('bip:')) {
                 const bipName = sel.slice(4);
                 datasets = [
@@ -1904,17 +1891,18 @@
                         backgroundColor: '#ef4444cc', borderColor: '#ef4444', borderWidth: 1
                     },
                     {
-                        label: 'Duration',
+                        label: 'Duration (min)',
                         data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.durSlots[slot] || 0) : null; }),
                         backgroundColor: '#f59e0bcc', borderColor: '#f59e0b', borderWidth: 1
                     },
                     {
-                        label: 'Intensity',
+                        label: 'Intensity (1–5)',
                         data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.intenSlots[slot] || 0) : null; }),
                         backgroundColor: '#10b981cc', borderColor: '#10b981', borderWidth: 1
                     }
                 ];
                 label = bipName;
+                yAxisLabel = 'Value';
             }
 
             const chartTitle = document.querySelector('#timeofday .chart-title');
@@ -1927,7 +1915,12 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: !!yAxisLabel, text: yAxisLabel || '', color: '#64748b', font: { size: 12 } }
+                        }
+                    }
                 }
             });
         }
