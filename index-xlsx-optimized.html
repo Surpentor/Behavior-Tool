@@ -272,7 +272,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                        const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
                         const parsed = parseMultiSheetXlsx(workbook);
                         resolve(parsed);
                     } catch (err) {
@@ -286,11 +286,11 @@
 
         function parseMultiSheetXlsx(workbook) {
             const sheetNames = workbook.SheetNames;
-            const dataSheets = [];
             let studentName = 'Unknown';
             let studentLocation = 'Unknown';
             const allDays = [];
-            const dataQualityIssues = [];
+            // correctionCounts: { "Sheet|month": n, "Sheet|year": n }
+            const correctionCounts = {};
 
             for (const sheetName of sheetNames) {
                 if (sheetName === 'Master' || sheetName === 'Overall Summary') continue;
@@ -305,53 +305,153 @@
                     studentName = sheetData[0][0];
                 }
 
-                // Parse repeating day blocks (23 rows per block)
-                let i = 4; // Start after header rows
+                // Scan every row for a date in column A (start of a day block)
+                const sheetDays = [];
+                let i = 1; // skip the student-name row
                 while (i < sheetData.length) {
                     const row = sheetData[i];
-                    if (!row || !row[0]) {
+                    if (!row || row[0] === undefined || row[0] === null || row[0] === '') {
                         i++;
                         continue;
                     }
 
-                    const firstCell = row[0];
-                    if (!(firstCell instanceof Date)) {
+                    // Stop at the "Monthly Report" summary block at the bottom
+                    // of each month sheet — that data is ignored on purpose.
+                    if (String(row[0]).trim().toLowerCase().startsWith('monthly report')) {
+                        break;
+                    }
+
+                    const cellDate = toDate(row[0]);
+                    if (!cellDate) {
                         i++;
                         continue;
                     }
 
-                    // Found a date block - parse the 23-row block
-                    let date = new Date(firstCell);
+                    // Found a date block
+                    let date = new Date(cellDate.getTime());
 
-                    // Auto-correct bad dates
+                    // Auto-correct bad dates: snap month to the sheet's month
                     const sheetMonth = parseMonthFromSheetName(sheetName);
                     if (sheetMonth !== null && date.getMonth() !== sheetMonth) {
                         date.setMonth(sheetMonth);
-                        dataQualityIssues.push(`Auto-corrected date on ${sheetName} sheet row ${i + 1} from month ${date.getMonth() + 1} to ${sheetMonth + 1}`);
+                        const key = sheetName + '|month';
+                        correctionCounts[key] = (correctionCounts[key] || 0) + 1;
                     }
 
                     const dayBlock = parseDayBlock(sheetData, i, sheetName);
                     if (dayBlock) {
                         dayBlock.date = date;
-                        allDays.push(dayBlock);
+                        dayBlock.sheet = sheetName;
+                        sheetDays.push(dayBlock);
+                        i += 22; // skip past the rest of this block
+                    } else {
+                        i++;
                     }
-
-                    i += 23;
                 }
+
+                // Auto-correct years: snap outliers to this sheet's dominant year
+                if (sheetDays.length > 0) {
+                    const yearCounts = {};
+                    sheetDays.forEach(d => {
+                        const y = d.date.getFullYear();
+                        yearCounts[y] = (yearCounts[y] || 0) + 1;
+                    });
+                    const dominantYear = parseInt(
+                        Object.entries(yearCounts).sort((a, b) => b[1] - a[1])[0][0]
+                    );
+                    sheetDays.forEach(d => {
+                        if (d.date.getFullYear() !== dominantYear) {
+                            d.date.setFullYear(dominantYear);
+                            const key = sheetName + '|year';
+                            correctionCounts[key] = (correctionCounts[key] || 0) + 1;
+                        }
+                    });
+                }
+
+                allDays.push(...sheetDays);
             }
 
             allDays.sort((a, b) => a.date - b.date);
+
+            // Drop BIP goals that have no activity on any day (template placeholders)
+            const bipActivity = {};
+            allDays.forEach(day => {
+                day.bipGoals.forEach(g => {
+                    const v = (g.frequency || 0) + (g.duration || 0) + (g.intensity || 0);
+                    bipActivity[g.name] = (bipActivity[g.name] || 0) + v;
+                });
+            });
+            allDays.forEach(day => {
+                day.bipGoals = day.bipGoals.filter(g => (bipActivity[g.name] || 0) > 0);
+            });
+
+            // Custom tracking is keyed by slot position (0/1/2). For each slot,
+            // pick the most common label spelling and total its activity; keep
+            // only slots that have non-zero data on at least one day (this drops
+            // unused "[insert tracking here]" placeholder rows).
+            const trackingMeta = [];
+            for (let slot = 0; slot < 3; slot++) {
+                const labelCounts = {};
+                let activity = 0;
+                allDays.forEach(day => {
+                    const t = day.tracking && day.tracking[slot];
+                    if (!t) return;
+                    if (t.label) labelCounts[t.label] = (labelCounts[t.label] || 0) + 1;
+                    activity += t.value || 0;
+                });
+                if (activity > 0) {
+                    const sorted = Object.entries(labelCounts).sort((a, b) => b[1] - a[1]);
+                    const label = sorted.length > 0 ? sorted[0][0] : ('Tracking ' + (slot + 1));
+                    trackingMeta.push({ slot, label });
+                }
+            }
+
+            // Build human-readable data quality summary
+            const dataQualityIssues = [];
+            Object.entries(correctionCounts).forEach(([key, count]) => {
+                const [sheet, type] = key.split('|');
+                const noun = count === 1 ? 'date' : 'dates';
+                if (type === 'month') {
+                    dataQualityIssues.push(`Corrected ${count} ${noun} on the "${sheet}" sheet — month did not match the sheet, snapped to ${sheet}.`);
+                } else {
+                    dataQualityIssues.push(`Corrected ${count} ${noun} on the "${sheet}" sheet — year was an outlier, snapped to the sheet's main year.`);
+                }
+            });
 
             return {
                 name: studentName,
                 location: studentLocation,
                 days: allDays,
+                trackingMeta,
                 dataQualityIssues,
                 dateRange: {
                     start: allDays.length > 0 ? allDays[0].date : new Date(),
                     end: allDays.length > 0 ? allDays[allDays.length - 1].date : new Date()
                 }
             };
+        }
+
+        // Convert a cell value into a JS Date, handling Date objects,
+        // Excel serial numbers, and date strings. Returns null if not a date.
+        function toDate(val) {
+            if (val instanceof Date) {
+                return isNaN(val.getTime()) ? null : val;
+            }
+            if (typeof val === 'number' && val > 0 && val < 100000) {
+                // Excel serial date: days since 1899-12-30
+                const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return isNaN(d.getTime()) ? null : d;
+            }
+            if (typeof val === 'string') {
+                const s = val.trim();
+                // Must look date-like (contains a digit and a / or -) to avoid
+                // matching text labels like category names.
+                if (s && /\d/.test(s) && /[\/\-]/.test(s)) {
+                    const d = new Date(s);
+                    return isNaN(d.getTime()) ? null : d;
+                }
+            }
+            return null;
         }
 
         function parseMonthFromSheetName(name) {
@@ -362,7 +462,7 @@
                 'April': 3, 'Apr': 3,
                 'May': 4,
                 'June': 5, 'Jun': 5,
-                'July': 6, 'Jul': 7,
+                'July': 6, 'Jul': 6,
                 'August': 7, 'Aug': 7,
                 'September': 8, 'Sep': 8, 'Septemb': 8,
                 'October': 9, 'Oct': 9,
@@ -375,7 +475,7 @@
         function parseDayBlock(sheetData, startRow, sheetName) {
             const block = {
                 categories: {},
-                additionalTracking: {},
+                tracking: [],
                 bipGoals: []
             };
 
@@ -436,50 +536,61 @@
                 return null;
             }
 
-            // Parse additional tracking (col 26, offset by 7-9)
-            if (startRow + 7 < sheetData.length) {
-                const row = sheetData[startRow + 7];
-                if (row && row[0] && row[0].toLowerCase().includes('sleep')) {
-                    block.additionalTracking['Sleeping (min)'] = parseFloat(row[26]) || 0;
+            // Parse the 3 custom tracking rows (offsets +7, +8, +9).
+            // Labels are student-specific AND often typed inconsistently from
+            // month to month ("Sleeping" vs "Sleeping in minutes"), so we key
+            // these by POSITION (slot 0/1/2) — the row position is always the
+            // same metric. The label is kept per-day so we can pick the most
+            // common spelling later. The daily value is the Total in column 26.
+            block.tracking = [];
+            for (let off = 7; off <= 9; off++) {
+                const row = sheetData[startRow + off];
+                let label = '', value = 0;
+                if (row && row[0] !== undefined && row[0] !== null && row[0] !== '') {
+                    label = cleanTrackingLabel(row[0]);
+                    value = parseFloat(row[26]) || 0;
                 }
-            }
-            if (startRow + 8 < sheetData.length) {
-                const row = sheetData[startRow + 8];
-                if (row && row[0] && row[0].toLowerCase().includes('argu')) {
-                    block.additionalTracking['Arguing'] = parseFloat(row[26]) || 0;
-                }
-            }
-            if (startRow + 9 < sheetData.length) {
-                const row = sheetData[startRow + 9];
-                if (row && row[0] && row[0].toLowerCase().includes('insert')) {
-                    block.additionalTracking['Custom'] = parseFloat(row[26]) || 0;
-                }
+                block.tracking.push({ label, value });
             }
 
-            // Parse BIP Goals (look for rows containing "BIP")
+            // Parse BIP Goals. Header rows are at offsets +10, +14, +18 and
+            // each is followed by Frequency / Duration / Intensity rows.
+            // Match is case-insensitive ("BIP Goal:" or "Bip Goal:").
             for (let j = startRow + 10; j < Math.min(startRow + 22, sheetData.length); j++) {
                 const row = sheetData[j];
-                if (row && row[0] && String(row[0]).includes('BIP')) {
-                    const goalName = String(row[0]).trim();
+                if (row && row[0] && String(row[0]).toUpperCase().includes('BIP')) {
+                    const goalName = String(row[0]).replace(/\s+/g, ' ').trim();
                     const goal = { name: goalName, frequency: 0, duration: 0, intensity: 0 };
 
-                    // Next rows should be Frequency, Duration, Intensity
-                    if (j + 1 < sheetData.length && sheetData[j + 1] && sheetData[j + 1][26] !== undefined) {
+                    // Next 3 rows are Frequency, Duration, Intensity (Total in col 26)
+                    if (sheetData[j + 1] && sheetData[j + 1][26] !== undefined) {
                         goal.frequency = parseFloat(sheetData[j + 1][26]) || 0;
                     }
-                    if (j + 2 < sheetData.length && sheetData[j + 2] && sheetData[j + 2][26] !== undefined) {
+                    if (sheetData[j + 2] && sheetData[j + 2][26] !== undefined) {
                         goal.duration = parseFloat(sheetData[j + 2][26]) || 0;
                     }
-                    if (j + 3 < sheetData.length && sheetData[j + 3] && sheetData[j + 3][26] !== undefined) {
+                    if (sheetData[j + 3] && sheetData[j + 3][26] !== undefined) {
                         goal.intensity = parseFloat(sheetData[j + 3][26]) || 0;
                     }
 
                     block.bipGoals.push(goal);
-                    j += 3; // Skip the next 3 rows (Frequency, Duration, Intensity)
+                    j += 3; // Skip the Frequency/Duration/Intensity rows
                 }
             }
 
             return block;
+        }
+
+        // Clean a custom-tracking row label into a readable metric name.
+        // "[insert tracking here] ex: sleeping minutes" -> "Sleeping minutes"
+        // "Sleeping in minutes" -> "Sleeping in minutes"
+        function cleanTrackingLabel(raw) {
+            let s = String(raw).replace(/\s+/g, ' ').trim();
+            s = s.replace(/\[insert tracking here\]/ig, '').trim();
+            const exMatch = s.match(/ex:\s*(.+)/i);
+            if (exMatch) s = exMatch[1].trim();
+            if (!s) return '';
+            return s.charAt(0).toUpperCase() + s.slice(1);
         }
 
         function initializeDashboard() {
@@ -503,43 +614,60 @@
             refreshCharts();
         }
 
+        // Turn an arbitrary metric/goal name into a safe DOM id fragment.
+        function safeId(name) {
+            return name.replace(/[^a-zA-Z0-9]/g, '-');
+        }
+
+        // Discover, in document order, which BIP goals exist across all days.
+        function getBipGoalNames() {
+            const seen = [];
+            studentData.days.forEach(day => {
+                day.bipGoals.forEach(goal => {
+                    if (!seen.includes(goal.name)) seen.push(goal.name);
+                });
+            });
+            return seen;
+        }
+
         function buildDynamicCharts() {
             const customTrackingCharts = document.getElementById('customTrackingCharts');
             customTrackingCharts.innerHTML = '';
 
-            // Detect what custom tracking exists
-            const trackingTypes = new Set();
-            const bipGoalNames = new Set();
+            const trackingMeta = studentData.trackingMeta || [];
+            const bipGoalNames = getBipGoalNames();
 
-            studentData.days.forEach(day => {
-                Object.keys(day.additionalTracking).forEach(key => trackingTypes.add(key));
-                day.bipGoals.forEach(goal => bipGoalNames.add(goal.name));
-            });
-
-            // Add charts for each
             let html = '';
-            trackingTypes.forEach(tracking => {
-                if (tracking === 'Custom') return; // Generic, skip
-                html += `
-                    <div class="chart-container" style="margin-bottom: 20px;">
-                        <h3 class="chart-title">📊 ${tracking}</h3>
-                        <canvas id="tracking-${tracking.replace(/\s+/g, '-')}"></canvas>
-                    </div>
-                `;
-            });
 
-            bipGoalNames.forEach(goal => {
-                html += `
-                    <div class="chart-container" style="margin-bottom: 20px;">
-                        <h3 class="chart-title">🎯 ${goal}</h3>
-                        <canvas id="bip-${goal.replace(/\s+/g, '-')}"></canvas>
-                    </div>
-                `;
-            });
-
-            if (html) {
-                customTrackingCharts.innerHTML = html;
+            if (trackingMeta.length > 0) {
+                html += '<h2 style="color:white;margin:10px 0;">📊 Custom Tracking</h2>';
+                html += '<div class="charts-grid">';
+                trackingMeta.forEach(meta => {
+                    html += `
+                        <div class="chart-container">
+                            <h3 class="chart-title">📊 ${meta.label}</h3>
+                            <canvas id="tracking-slot-${meta.slot}"></canvas>
+                        </div>
+                    `;
+                });
+                html += '</div>';
             }
+
+            if (bipGoalNames.length > 0) {
+                html += '<h2 style="color:white;margin:10px 0;">🎯 BIP Goals (detail)</h2>';
+                html += '<div class="charts-grid">';
+                bipGoalNames.forEach(name => {
+                    html += `
+                        <div class="chart-container">
+                            <h3 class="chart-title">🎯 ${name}</h3>
+                            <canvas id="bip-${safeId(name)}"></canvas>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            customTrackingCharts.innerHTML = html;
         }
 
         function refreshCharts() {
@@ -549,6 +677,82 @@
             updateCategoryPerformanceChart(metric);
             updateTimeOfDayChart(metric);
             updateBipGoalsChart();
+            updateTrackingCharts();
+            updateIndividualBipCharts();
+        }
+
+        // One line chart per custom tracking metric (value over time).
+        // Tracking metrics are keyed by slot position (0/1/2).
+        function updateTrackingCharts() {
+            const labels = studentData.days.map(d => d.date.toLocaleDateString());
+            (studentData.trackingMeta || []).forEach(meta => {
+                const canvas = document.getElementById('tracking-slot-' + meta.slot);
+                if (!canvas) return;
+                const key = 'tracking-slot-' + meta.slot;
+                if (charts[key]) charts[key].destroy();
+                const data = studentData.days.map(day => {
+                    const t = day.tracking && day.tracking[meta.slot];
+                    return t ? (t.value || 0) : 0;
+                });
+                charts[key] = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: meta.label,
+                            data,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: '#8b5cf620',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            });
+        }
+
+        // One chart per BIP goal showing Frequency / Duration / Intensity over time.
+        function updateIndividualBipCharts() {
+            const labels = studentData.days.map(d => d.date.toLocaleDateString());
+            getBipGoalNames().forEach(name => {
+                const canvas = document.getElementById('bip-' + safeId(name));
+                if (!canvas) return;
+                const key = 'bip-' + safeId(name);
+                if (charts[key]) charts[key].destroy();
+
+                const freq = [], dur = [], inten = [];
+                studentData.days.forEach(day => {
+                    const goal = day.bipGoals.find(g => g.name === name);
+                    freq.push(goal ? goal.frequency : 0);
+                    dur.push(goal ? goal.duration : 0);
+                    inten.push(goal ? goal.intensity : 0);
+                });
+
+                charts[key] = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false },
+                            { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false },
+                            { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            });
         }
 
         function updateCategoryTrendChart(metric) {
