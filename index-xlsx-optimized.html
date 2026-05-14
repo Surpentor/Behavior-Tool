@@ -605,15 +605,16 @@
                         </div>
                     </div>
 
-                    <div class="charts-grid">
+                    <div id="todMainChart" class="charts-grid">
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
-                                <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
+                                <h3 class="chart-title" id="todChartTitle">⏰ Time-of-Day Patterns</h3>
                                 <button class="chart-print-btn" onclick="printChart('timeOfDay')">Print</button>
                             </div>
                             <canvas id="timeOfDay"></canvas>
                         </div>
                     </div>
+                    <div id="todBipCharts" style="display: none;"></div>
                 </div>
 
                 <!-- BIP Goals Tab -->
