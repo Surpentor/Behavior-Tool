@@ -523,20 +523,245 @@
             }
         }
 
+        @page {
+            size: 8.5in 11in;
+            margin: 0.5in;
+        }
+
         @media print {
+            * {
+                box-shadow: none !important;
+            }
+
             body {
                 background: white;
+                margin: 0;
+                padding: 0;
+                font-size: 11px;
+                line-height: 1.4;
             }
-            .header, .clear-button, .filters, .overview-cards, .table-controls, .print-hint {
+
+            .container {
+                max-width: 100%;
+                margin: 0;
+            }
+
+            .header, .clear-button, .filters, .overview-cards, .table-controls, .print-hint, .upload-area, #uploadSection, #messageArea {
                 display: none !important;
             }
+
             .dashboard {
                 padding: 0;
+                margin: 0;
             }
-            .chart-container, .analysis-card, .data-table-container {
-                break-inside: avoid;
+
+            .dashboard-header {
+                padding: 0.15in;
+                margin-bottom: 0.2in;
+                border: none;
+                box-shadow: none;
+                background: white;
+                border-bottom: 2px solid #000;
                 page-break-inside: avoid;
-                margin-bottom: 30px;
+                break-inside: avoid;
+            }
+
+            .dashboard-header h2 {
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+
+            .dashboard-header .location {
+                font-size: 10px;
+                margin-bottom: 5px;
+            }
+
+            .dashboard-header div:last-child {
+                font-size: 10px;
+                margin-top: 5px;
+            }
+
+            .dashboard-header p {
+                margin: 3px 0;
+            }
+
+            /* Chart containers - optimize for page width */
+            .charts-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.2in;
+                margin-bottom: 0.3in;
+            }
+
+            .chart-container {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                padding: 0.15in;
+                border: 1px solid #ccc;
+                margin: 0;
+                background: white;
+                min-height: auto;
+                max-height: 3.5in;
+            }
+
+            .chart-header {
+                margin: 0 0 0.1in 0;
+                padding: 0;
+            }
+
+            .chart-title {
+                font-size: 12px;
+                font-weight: bold;
+                margin: 0;
+            }
+
+            .print-button {
+                display: none !important;
+            }
+
+            canvas {
+                max-width: 100%;
+                max-height: 3in;
+            }
+
+            /* Analysis cards */
+            .analysis-section {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.2in;
+                margin-bottom: 0.3in;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .analysis-card {
+                padding: 0.15in;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin: 0;
+                background: white;
+            }
+
+            .analysis-card h3 {
+                font-size: 12px;
+                font-weight: bold;
+                margin: 0 0 0.1in 0;
+                padding: 0;
+            }
+
+            .trend-item, .anomaly-item {
+                padding: 0.08in;
+                margin-bottom: 0.08in;
+                font-size: 10px;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .trend-header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+            }
+
+            .trend-header h4 {
+                font-size: 10px;
+                font-weight: bold;
+                margin: 0;
+            }
+
+            .trend-change, .anomaly-description {
+                margin: 2px 0;
+                font-size: 10px;
+            }
+
+            .anomaly-time {
+                font-size: 9px;
+                margin-bottom: 3px;
+                font-weight: bold;
+            }
+
+            /* Data table */
+            .data-table-container {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                padding: 0.15in;
+                border: 1px solid #ccc;
+                margin: 0.2in 0;
+                background: white;
+            }
+
+            .table-header {
+                margin-bottom: 0.1in;
+            }
+
+            .table-header h3 {
+                font-size: 12px;
+                font-weight: bold;
+                margin: 0 0 0.08in 0;
+            }
+
+            .data-table {
+                font-size: 9px;
+                width: 100%;
+                border-collapse: collapse;
+                margin: 0;
+            }
+
+            .data-table thead {
+                background: #f0f0f0;
+            }
+
+            .data-table th {
+                padding: 4px 6px;
+                text-align: left;
+                font-weight: bold;
+                border: 1px solid #999;
+                font-size: 9px;
+            }
+
+            .data-table td {
+                padding: 3px 6px;
+                border: 1px solid #ddd;
+                font-size: 9px;
+            }
+
+            .data-table tbody tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+
+            .data-table td.points {
+                font-weight: bold;
+            }
+
+            .empty-message {
+                font-size: 10px;
+                padding: 0.1in;
+            }
+
+            /* Page breaks */
+            .chart-container:nth-child(3) {
+                page-break-before: auto;
+            }
+
+            .data-table-container {
+                page-break-before: auto;
+            }
+
+            /* Remove colors, use black & white for printing */
+            .card, .analysis-card, .chart-container, .data-table-container {
+                color: black;
+                border-color: #000;
+            }
+
+            /* Ensure text is black */
+            p, h1, h2, h3, h4, h5, h6, span, td, th {
+                color: black !important;
+            }
+
+            /* Hide empty messages if no content */
+            .trend-list:empty, .anomaly-list:empty {
+                display: none;
             }
         }
     </style>
