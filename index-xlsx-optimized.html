@@ -1183,7 +1183,7 @@
                     `<option value="${idx}">${day.date.toLocaleDateString()}</option>`
                 ).join('');
 
-            // Populate Time-of-Day selector with categories and tracking
+            // Populate Time-of-Day selector with categories, tracking, and BIP goals
             const todSelect = document.getElementById('todCategorySelect');
             if (todSelect) {
                 let opts = '<option value="__all__">All Categories (averaged)</option>';
@@ -1194,6 +1194,14 @@
                 if (trkMeta.length > 0) {
                     opts += '<optgroup label="─── Custom Tracking ───">';
                     opts += trkMeta.map(m => `<option value="trk:${m.slot}">${m.label}</option>`).join('');
+                    opts += '</optgroup>';
+                }
+                const bipNames = allBipGoalNames();
+                if (bipNames.length > 0) {
+                    opts += '<optgroup label="─── BIP Goals ───">';
+                    bipNames.forEach(name => {
+                        opts += `<option value="bip:${name}">${name}</option>`;
+                    });
                     opts += '</optgroup>';
                 }
                 todSelect.innerHTML = opts;
@@ -1887,6 +1895,26 @@
                     backgroundColor: '#8b5cf6cc', borderColor: '#8b5cf6', borderWidth: 1
                 }];
                 label = meta ? meta.label : ('Tracking ' + trkSlot);
+            } else if (sel.startsWith('bip:')) {
+                const bipName = sel.slice(4);
+                datasets = [
+                    {
+                        label: 'Frequency',
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.freqSlots[slot] || 0) : null; }),
+                        backgroundColor: '#ef4444cc', borderColor: '#ef4444', borderWidth: 1
+                    },
+                    {
+                        label: 'Duration',
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.durSlots[slot] || 0) : null; }),
+                        backgroundColor: '#f59e0bcc', borderColor: '#f59e0b', borderWidth: 1
+                    },
+                    {
+                        label: 'Intensity',
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.intenSlots[slot] || 0) : null; }),
+                        backgroundColor: '#10b981cc', borderColor: '#10b981', borderWidth: 1
+                    }
+                ];
+                label = bipName;
             }
 
             const chartTitle = document.querySelector('#timeofday .chart-title');
