@@ -852,6 +852,26 @@
             return name.replace(/[^a-zA-Z0-9]/g, '-');
         }
 
+        // Date-input helpers. <input type="date"> reads/writes via valueAsDate
+        // in UTC, but our parsed dates are interpreted in local time — mixing
+        // the two silently drops days at the range edges (or filters everything
+        // out). Always convert through local Y/M/D components instead.
+        function dateToInputValue(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        function inputValueToDate(str) {
+            if (!str) return null;
+            const [y, m, d] = str.split('-').map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m - 1, d);
+        }
+        function dateKey(d) {
+            return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+        }
+
         function getBipGoalNames() {
             const seen = [];
             (filteredDays || studentData.days).forEach(day => {
@@ -900,10 +920,8 @@
                 ).join('');
 
             // Setup date range filter
-            const startDate = document.getElementById('filterStartDate');
-            const endDate = document.getElementById('filterEndDate');
-            startDate.valueAsDate = studentData.dateRange.start;
-            endDate.valueAsDate = studentData.dateRange.end;
+            document.getElementById('filterStartDate').value = dateToInputValue(studentData.dateRange.start);
+            document.getElementById('filterEndDate').value = dateToInputValue(studentData.dateRange.end);
 
             // Build date selection for comparison
             buildDateSelectionArea();
@@ -1013,14 +1031,17 @@
         }
 
         function applyDateFilter() {
-            const startVal = document.getElementById('filterStartDate').valueAsDate;
-            const endVal = document.getElementById('filterEndDate').valueAsDate;
+            const startDate = inputValueToDate(document.getElementById('filterStartDate').value);
+            const endDate = inputValueToDate(document.getElementById('filterEndDate').value);
 
-            if (!startVal || !endVal) return;
+            if (!startDate || !endDate) return;
+
+            const startKey = dateKey(startDate);
+            const endKey = dateKey(endDate);
 
             filteredDays = studentData.days.filter(day => {
-                const d = day.date.getTime();
-                return d >= startVal.getTime() && d <= endVal.getTime();
+                const k = dateKey(day.date);
+                return k >= startKey && k <= endKey;
             });
 
             document.getElementById('dayCount').textContent = filteredDays.length;
@@ -1029,8 +1050,8 @@
 
         function resetDateFilter() {
             filteredDays = [...studentData.days];
-            document.getElementById('filterStartDate').valueAsDate = studentData.dateRange.start;
-            document.getElementById('filterEndDate').valueAsDate = studentData.dateRange.end;
+            document.getElementById('filterStartDate').value = dateToInputValue(studentData.dateRange.start);
+            document.getElementById('filterEndDate').value = dateToInputValue(studentData.dateRange.end);
             document.getElementById('dayCount').textContent = studentData.days.length;
             refreshCharts();
         }
@@ -1047,27 +1068,48 @@
 
             const day = studentData.days[idx];
             document.getElementById('selectedDateInfo').textContent = `Current date: ${day.date.toLocaleDateString()}`;
-            document.getElementById('adjustedDate').valueAsDate = day.date;
+            document.getElementById('adjustedDate').value = dateToInputValue(day.date);
             panel.style.display = 'block';
         }
 
         function applyDateAdjustment() {
             const selector = document.getElementById('dateSelector');
             const idx = parseInt(selector.value);
-            const newDate = document.getElementById('adjustedDate').valueAsDate;
+            const newDate = inputValueToDate(document.getElementById('adjustedDate').value);
 
-            if (!newDate) {
+            if (isNaN(idx) || !newDate) {
                 showMessage('Please select a new date', 'error');
                 return;
             }
 
             const oldDate = studentData.days[idx].date.toLocaleDateString();
             studentData.days[idx].date = newDate;
+
+            // Re-sort and refresh date-dependent state since order/indices changed
+            studentData.days.sort((a, b) => a.date - b.date);
+            studentData.dateRange.start = studentData.days[0].date;
+            studentData.dateRange.end = studentData.days[studentData.days.length - 1].date;
             filteredDays = [...studentData.days];
 
+            document.getElementById('dateRange').textContent =
+                `${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}`;
+            document.getElementById('filterStartDate').value = dateToInputValue(studentData.dateRange.start);
+            document.getElementById('filterEndDate').value = dateToInputValue(studentData.dateRange.end);
+            document.getElementById('dayCount').textContent = studentData.days.length;
+
+            const dateSelector = document.getElementById('dateSelector');
+            dateSelector.innerHTML = '<option value="">-- Select a date --</option>' +
+                studentData.days.map((day, i) =>
+                    `<option value="${i}">${day.date.toLocaleDateString()}</option>`
+                ).join('');
+            dateSelector.value = '';
+
+            selectedDatesForComparison.clear();
+            buildDateSelectionArea();
+
+            document.getElementById('dateAdjustmentPanel').style.display = 'none';
             showMessage(`Date adjusted from ${oldDate} to ${newDate.toLocaleDateString()}`, 'success');
             refreshCharts();
-            selectDateToAdjust();
         }
 
         function buildDynamicCharts() {
