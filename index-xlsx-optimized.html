@@ -605,16 +605,15 @@
                         </div>
                     </div>
 
-                    <div id="todMainChart" class="charts-grid">
+                    <div class="charts-grid">
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
-                                <h3 class="chart-title" id="todChartTitle">⏰ Time-of-Day Patterns</h3>
+                                <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
                                 <button class="chart-print-btn" onclick="printChart('timeOfDay')">Print</button>
                             </div>
                             <canvas id="timeOfDay"></canvas>
                         </div>
                     </div>
-                    <div id="todBipCharts" style="display: none;"></div>
                 </div>
 
                 <!-- BIP Goals Tab -->
@@ -1175,7 +1174,7 @@
                     `<option value="${idx}">${day.date.toLocaleDateString()}</option>`
                 ).join('');
 
-            // Populate Time-of-Day selector with categories, tracking, and BIP goals
+            // Populate Time-of-Day selector with categories and tracking
             const todSelect = document.getElementById('todCategorySelect');
             if (todSelect) {
                 let opts = '<option value="__all__">All Categories (averaged)</option>';
@@ -1186,14 +1185,6 @@
                 if (trkMeta.length > 0) {
                     opts += '<optgroup label="─── Custom Tracking ───">';
                     opts += trkMeta.map(m => `<option value="trk:${m.slot}">${m.label}</option>`).join('');
-                    opts += '</optgroup>';
-                }
-                const bipNames = allBipGoalNames();
-                if (bipNames.length > 0) {
-                    opts += '<optgroup label="─── BIP Goals ───">';
-                    bipNames.forEach(name => {
-                        opts += `<option value="bip:${name}">${name}</option>`;
-                    });
                     opts += '</optgroup>';
                 }
                 todSelect.innerHTML = opts;
@@ -1855,52 +1846,6 @@
                 return result;
             };
 
-            const mainArea = document.getElementById('todMainChart');
-            const bipArea = document.getElementById('todBipCharts');
-
-            // BIP goals get their own section with 3 separate charts
-            if (sel.startsWith('bip:')) {
-                mainArea.style.display = 'none';
-                const bipName = sel.slice(4);
-                const metrics = [
-                    { key: 'freqSlots', label: 'Frequency', color: '#ef4444' },
-                    { key: 'durSlots',  label: 'Duration',  color: '#f59e0b' },
-                    { key: 'intenSlots', label: 'Intensity', color: '#10b981' }
-                ];
-
-                let html = '<div class="charts-grid">';
-                metrics.forEach((m, idx) => {
-                    html += `<div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title">⏰ ${bipName} — ${m.label}</h3>
-                            <button class="chart-print-btn" onclick="printChart('tod-bip-${idx}')">Print</button>
-                        </div>
-                        <canvas id="tod-bip-${idx}"></canvas>
-                    </div>`;
-                });
-                html += '</div>';
-                bipArea.innerHTML = html;
-                bipArea.style.display = 'block';
-
-                metrics.forEach((m, idx) => {
-                    const canvasId = 'tod-bip-' + idx;
-                    const chartKey = 'tod-bip-' + idx;
-                    if (charts[chartKey]) charts[chartKey].destroy();
-                    const rawData = avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g[m.key][slot] || 0) : null; });
-                    const data = rawData.map(v => Math.round(v));
-                    charts[chartKey] = new Chart(document.getElementById(canvasId).getContext('2d'), {
-                        type: 'bar',
-                        data: { labels: SLOT_LABELS, datasets: [{ label: m.label, data, backgroundColor: m.color + 'cc', borderColor: m.color, borderWidth: 1 }] },
-                        options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                    });
-                });
-                return;
-            }
-
-            // All other selections use the main chart area
-            mainArea.style.display = '';
-            bipArea.style.display = 'none';
-
             let datasets, label;
 
             if (sel === '__all__') {
@@ -1935,7 +1880,7 @@
                 label = meta ? meta.label : ('Tracking ' + trkSlot);
             }
 
-            const chartTitle = document.querySelector('#todChartTitle');
+            const chartTitle = document.querySelector('#timeofday .chart-title');
             if (chartTitle) chartTitle.textContent = `⏰ Time-of-Day Patterns — ${label}`;
 
             charts.timeOfDay = new Chart(canvas.getContext('2d'), {
