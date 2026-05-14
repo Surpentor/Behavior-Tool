@@ -1872,7 +1872,7 @@
                 const catsToShow = allCategoryNames.filter(c => enabledCategories.has(c));
                 datasets = catsToShow.map((cat, idx) => ({
                     label: cat,
-                    data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return (cd && cd.slots) ? (cd.slots[slot] || 0) : null; }),
+                    data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return (cd && cd.slots) ? cd.slots[slot] : null; }),
                     backgroundColor: colors[idx % colors.length] + 'cc',
                     borderColor: colors[idx % colors.length],
                     borderWidth: 1
@@ -1883,7 +1883,7 @@
                 const cat = sel.slice(4);
                 datasets = [{
                     label: cat,
-                    data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return cd ? (cd.slots[slot] || 0) : null; }),
+                    data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return cd ? cd.slots[slot] : null; }),
                     backgroundColor: '#3b82f6cc', borderColor: '#3b82f6', borderWidth: 1
                 }];
                 label = cat;
@@ -1893,7 +1893,7 @@
                 const meta = (studentData.trackingMeta || []).find(m => m.slot === trkSlot);
                 datasets = [{
                     label: meta ? meta.label : ('Tracking ' + trkSlot),
-                    data: avgSlots((day, slot) => { const t = day.tracking && day.tracking[trkSlot]; return (t && t.slots) ? (t.slots[slot] || 0) : null; }),
+                    data: avgSlots((day, slot) => { const t = day.tracking && day.tracking[trkSlot]; return (t && t.slots) ? t.slots[slot] : null; }),
                     backgroundColor: '#8b5cf6cc', borderColor: '#8b5cf6', borderWidth: 1
                 }];
                 label = meta ? meta.label : ('Tracking ' + trkSlot);
@@ -1903,17 +1903,17 @@
                 datasets = [
                     {
                         label: 'Frequency',
-                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.freqSlots[slot] || 0) : null; }),
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.freqSlots[slot] : null; }),
                         backgroundColor: '#ef4444cc', borderColor: '#ef4444', borderWidth: 1
                     },
                     {
                         label: 'Duration (min)',
-                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.durSlots[slot] || 0) : null; }),
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.durSlots[slot] : null; }),
                         backgroundColor: '#f59e0bcc', borderColor: '#f59e0b', borderWidth: 1
                     },
                     {
                         label: 'Intensity (1–5)',
-                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? (g.intenSlots[slot] || 0) : null; }),
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.intenSlots[slot] : null; }),
                         backgroundColor: '#10b981cc', borderColor: '#10b981', borderWidth: 1
                     }
                 ];
