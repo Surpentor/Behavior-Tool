@@ -144,6 +144,50 @@
             background-color: #2563eb;
         }
 
+        .print-controls {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .print-controls h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            flex-basis: 100%;
+            margin-bottom: 10px;
+        }
+
+        .print-btn {
+            background: linear-gradient(135deg, var(--primary-color), #2563eb);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .print-btn:active {
+            transform: translateY(0);
+        }
+
         .dashboard-header {
             background: white;
             padding: 25px;
@@ -528,6 +572,32 @@
             margin: 0.5in;
         }
 
+        /* Print mode filters */
+        body.printing-charts .charts-grid ~ * {
+            display: none;
+        }
+
+        body.printing-charts .overview-cards,
+        body.printing-charts .filters,
+        body.printing-charts .analysis-section,
+        body.printing-charts .data-table-container {
+            display: none !important;
+        }
+
+        body.printing-analysis .charts-grid,
+        body.printing-analysis .overview-cards,
+        body.printing-analysis .filters,
+        body.printing-analysis .data-table-container {
+            display: none !important;
+        }
+
+        body.printing-table .charts-grid,
+        body.printing-table .overview-cards,
+        body.printing-table .filters,
+        body.printing-table .analysis-section {
+            display: none !important;
+        }
+
         @media print {
             * {
                 box-shadow: none !important;
@@ -546,7 +616,7 @@
                 margin: 0;
             }
 
-            .header, .clear-button, .filters, .overview-cards, .table-controls, .print-hint, .upload-area, #uploadSection, #messageArea {
+            .header, .clear-button, .print-controls, .filters, .overview-cards, .table-controls, .print-hint, .upload-area, #uploadSection, #messageArea {
                 display: none !important;
             }
 
@@ -786,6 +856,14 @@
 
         <div id="dashboard" class="dashboard">
             <button class="clear-button" onclick="clearData()">← Load Different Student</button>
+
+            <div class="print-controls">
+                <h3>🖨️ Print Options</h3>
+                <button class="print-btn" onclick="printFullReport()">📄 Full Report</button>
+                <button class="print-btn" onclick="printCharts()">📊 Charts Only</button>
+                <button class="print-btn" onclick="printAnalysis()">📈 Analysis Only</button>
+                <button class="print-btn" onclick="printDataTable()">📋 Data Table Only</button>
+            </div>
 
             <div class="dashboard-header">
                 <div>
@@ -1524,8 +1602,36 @@
             }
         }
 
-        function printChart(chartId) {
-            window.print();
+        function printFullReport() {
+            document.body.classList.add('printing-full');
+            setTimeout(() => {
+                window.print();
+                document.body.classList.remove('printing-full');
+            }, 100);
+        }
+
+        function printCharts() {
+            document.body.classList.add('printing-charts');
+            setTimeout(() => {
+                window.print();
+                document.body.classList.remove('printing-charts');
+            }, 100);
+        }
+
+        function printAnalysis() {
+            document.body.classList.add('printing-analysis');
+            setTimeout(() => {
+                window.print();
+                document.body.classList.remove('printing-analysis');
+            }, 100);
+        }
+
+        function printDataTable() {
+            document.body.classList.add('printing-table');
+            setTimeout(() => {
+                window.print();
+                document.body.classList.remove('printing-table');
+            }, 100);
         }
 
         // Prevent data from being saved in history
