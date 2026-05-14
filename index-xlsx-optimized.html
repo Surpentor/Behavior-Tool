@@ -498,27 +498,24 @@
                         <div class="stat-value" id="dayCount">0</div>
                         <div class="stat-label">Days Shown</div>
                     </div>
-                    <div class="stat-pill" style="position: relative;">
-                        <div class="stat-value" id="dateRange" style="font-size: 0.95rem; cursor: pointer;" onclick="toggleHeaderDateEditor()">-</div>
-                        <div class="stat-label">Date Range</div>
-                        <button class="chart-print-btn" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem;" onclick="toggleHeaderDateEditor()">✎</button>
-                    </div>
-                </div>
-
-                <div id="headerDateEditor" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 16px; margin-top: 8px; box-shadow: var(--shadow-lg); z-index: 10;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                        <div>
-                            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">From:</label>
-                            <input type="date" id="headerStartDate" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                    <div class="stat-pill" id="dateRangePill" style="min-width: 200px;">
+                        <!-- Display mode -->
+                        <div id="dateRangeDisplay">
+                            <div class="stat-value" id="dateRange" style="font-size: 0.9rem; cursor: pointer;" onclick="showHeaderDateEditor()" title="Click to edit">-</div>
+                            <div class="stat-label">Date Range <span style="opacity:0.6; font-size:0.7rem;">(click to edit)</span></div>
                         </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">To:</label>
-                            <input type="date" id="headerEndDate" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                        <!-- Edit mode -->
+                        <div id="dateRangeEdit" style="display: none;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                <input type="date" id="headerStartDate" style="flex: 1; padding: 5px 6px; border: 1px solid #c7d2fe; border-radius: 6px; font-size: 0.82rem; font-family: inherit;">
+                                <span style="color: var(--text-secondary); font-size: 0.8rem;">→</span>
+                                <input type="date" id="headerEndDate" style="flex: 1; padding: 5px 6px; border: 1px solid #c7d2fe; border-radius: 6px; font-size: 0.82rem; font-family: inherit;">
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn" onclick="applyHeaderDateFilter()" style="flex: 1; padding: 5px 8px; font-size: 0.8rem;">Apply</button>
+                                <button style="flex: 1; padding: 5px 8px; font-size: 0.8rem; background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; font-family: inherit;" onclick="hideHeaderDateEditor()">Cancel</button>
+                            </div>
                         </div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn" onclick="applyHeaderDateFilter()" style="flex: 1; font-size: 0.9rem; padding: 8px;">Apply</button>
-                        <button class="btn btn-secondary" onclick="toggleHeaderDateEditor()" style="flex: 1; font-size: 0.9rem; padding: 8px;">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -2339,15 +2336,16 @@
             }
         }
 
-        function toggleHeaderDateEditor() {
-            const editor = document.getElementById('headerDateEditor');
-            if (editor.style.display === 'none') {
-                editor.style.display = 'block';
-                document.getElementById('headerStartDate').value = document.getElementById('filterStartDate').value;
-                document.getElementById('headerEndDate').value = document.getElementById('filterEndDate').value;
-            } else {
-                editor.style.display = 'none';
-            }
+        function showHeaderDateEditor() {
+            document.getElementById('dateRangeDisplay').style.display = 'none';
+            document.getElementById('dateRangeEdit').style.display = 'block';
+            document.getElementById('headerStartDate').value = document.getElementById('filterStartDate').value;
+            document.getElementById('headerEndDate').value = document.getElementById('filterEndDate').value;
+        }
+
+        function hideHeaderDateEditor() {
+            document.getElementById('dateRangeEdit').style.display = 'none';
+            document.getElementById('dateRangeDisplay').style.display = 'block';
         }
 
         function applyHeaderDateFilter() {
@@ -2366,7 +2364,7 @@
 
             document.getElementById('filterStartDate').value = document.getElementById('headerStartDate').value;
             document.getElementById('filterEndDate').value = document.getElementById('headerEndDate').value;
-            toggleHeaderDateEditor();
+            hideHeaderDateEditor();
             applyDateFilter();
         }
 
