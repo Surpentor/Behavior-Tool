@@ -321,6 +321,22 @@
             font-size: 0.95rem;
         }
 
+        #dateComparisonPanel {
+            background: #f0f9ff;
+            border: 1px solid #7dd3fc;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        #globalDateSelectionArea {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            background: white;
+        }
+
         .summary-table-wrap {
             overflow-x: auto;
             border: 1px solid var(--border-color);
@@ -396,7 +412,7 @@
             <div class="dashboard-header">
                 <div>
                     <h2 id="studentName"></h2>
-                    <p class="location" id="studentLocation"></p>
+                    <p class="location" id="studentLocation" style="display: none;"></p>
                 </div>
                 <div>
                     <p><strong>Total Days:</strong> <span id="dayCount">0</span></p>
@@ -404,9 +420,16 @@
                 </div>
             </div>
 
-            <div class="data-quality" id="dataQualityPanel" style="display: none;">
-                <h3>⚠️ Data Quality Issues</h3>
-                <div id="dataQualityList"></div>
+            <div class="controls-panel" id="dateComparisonPanel" style="display: none;">
+                <div class="control-group">
+                    <label><strong>📍 Compare up to 5 dates on all charts:</strong></label>
+                    <div id="globalDateSelectionArea" style="margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="applyDateComparison()">Apply Comparison Overlay</button>
+                        <button class="btn" onclick="clearDateComparison()" style="background-color: #999;">Clear Comparison</button>
+                    </div>
+                    <p id="comparisonStatus" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px;"></p>
+                </div>
             </div>
 
             <div class="tabs-container">
@@ -627,6 +650,12 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="controls-panel" id="dataQualityPanel" style="display: none;">
+                        <h3>⚠️ Data Quality Issues</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">The following dates were auto-corrected during import to fix month/year mismatches:</p>
+                        <div id="dataQualityList"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -681,6 +710,9 @@
 
                 if (sheetData[0] && sheetData[0][0]) {
                     studentName = sheetData[0][0];
+                }
+                if (sheetData[0] && sheetData[0][1]) {
+                    studentLocation = sheetData[0][1];
                 }
 
                 const sheetDays = [];
@@ -961,7 +993,11 @@
 
         function initializeDashboard() {
             document.getElementById('studentName').textContent = studentData.name;
-            document.getElementById('studentLocation').textContent = studentData.location;
+            const locEl = document.getElementById('studentLocation');
+            if (studentData.location && studentData.location !== 'Unknown') {
+                locEl.textContent = studentData.location;
+                locEl.style.display = 'block';
+            }
             document.getElementById('dayCount').textContent = studentData.days.length;
             document.getElementById('dateRange').textContent =
                 `${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}`;
@@ -1003,6 +1039,10 @@
             // Build date selection for comparison
             buildDateSelectionArea();
 
+            // Build global date comparison controls
+            buildGlobalDateSelection();
+            document.getElementById('dateComparisonPanel').style.display = 'block';
+
             // Build dynamic charts
             buildDynamicCharts();
 
@@ -1039,6 +1079,63 @@
                     </div>`
                 ).join('') +
                 '</div>';
+        }
+
+        function buildGlobalDateSelection() {
+            const area = document.getElementById('globalDateSelectionArea');
+            area.innerHTML = '<div class="checkbox-group">' +
+                studentData.days.map((day, idx) =>
+                    `<div class="checkbox-item">
+                        <input type="checkbox" id="gdate-${idx}" onchange="toggleGlobalComparisonDate(${idx})">
+                        <label for="gdate-${idx}">${day.date.toLocaleDateString()}</label>
+                    </div>`
+                ).join('') +
+                '</div>';
+        }
+
+        let comparisonOverlayActive = false;
+
+        function toggleGlobalComparisonDate(idx) {
+            if (document.getElementById('gdate-' + idx).checked) {
+                if (selectedDatesForComparison.size < 5) {
+                    selectedDatesForComparison.add(idx);
+                } else {
+                    document.getElementById('gdate-' + idx).checked = false;
+                    showMessage('Maximum 5 dates for comparison', 'error');
+                }
+            } else {
+                selectedDatesForComparison.delete(idx);
+            }
+            updateComparisonStatus();
+        }
+
+        function updateComparisonStatus() {
+            const el = document.getElementById('comparisonStatus');
+            if (selectedDatesForComparison.size === 0) {
+                el.textContent = 'Select up to 5 dates, then apply to see them overlaid on all charts.';
+            } else {
+                el.textContent = `${selectedDatesForComparison.size} date(s) selected. ${comparisonOverlayActive ? '✓ Overlay active on all charts.' : 'Click Apply to show overlay.'}`;
+            }
+        }
+
+        function applyDateComparison() {
+            if (selectedDatesForComparison.size === 0) {
+                showMessage('Select at least one date to compare', 'error');
+                return;
+            }
+            comparisonOverlayActive = true;
+            updateComparisonStatus();
+            refreshCharts();
+            showMessage(`Comparison overlay applied to all charts (${selectedDatesForComparison.size} date(s))`, 'success');
+        }
+
+        function clearDateComparison() {
+            selectedDatesForComparison.clear();
+            comparisonOverlayActive = false;
+            document.querySelectorAll('#globalDateSelectionArea input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateComparisonStatus();
+            refreshCharts();
+            showMessage('Comparison overlay cleared', 'success');
         }
 
         function toggleComparisonDate(idx) {
@@ -1380,6 +1477,34 @@
             URL.revokeObjectURL(url);
         }
 
+        function addComparisonOverlay(days, datasets, metric, valueExtractor) {
+            // If comparison overlay is active, add distinct series for selected dates
+            if (!comparisonOverlayActive || selectedDatesForComparison.size === 0) {
+                return datasets;
+            }
+
+            const selectedIndices = Array.from(selectedDatesForComparison);
+            const overlayColors = ['#dc2626', '#9333ea', '#0891b2', '#ea580c', '#059669'];
+            const overlayDatasets = selectedIndices.map((dayIdx, colorIdx) => {
+                const day = days[dayIdx];
+                if (!day) return null;
+                const data = days.map((d, i) => i === dayIdx ? valueExtractor(d) : null);
+                return {
+                    label: `📌 ${day.date.toLocaleDateString()}`,
+                    data,
+                    borderColor: overlayColors[colorIdx % overlayColors.length],
+                    backgroundColor: overlayColors[colorIdx % overlayColors.length],
+                    borderWidth: 3,
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    showLine: false,
+                    tension: 0
+                };
+            }).filter(d => d);
+
+            return [...datasets, ...overlayDatasets];
+        }
+
         function updateCategoryTrendChart(metric) {
             const canvas = document.getElementById('categoryTrend');
             if (!canvas) return;
@@ -1413,11 +1538,20 @@
                 };
             });
 
+            // Add comparison overlay if active
+            const finalDatasets = addComparisonOverlay(days, datasets, metric, (day) => {
+                const cat = categories[0];
+                if (day.categories && day.categories[cat]) {
+                    return metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
+                }
+                return 0;
+            });
+
             charts.categoryTrend = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: days.map(d => d.date.toLocaleDateString()),
-                    datasets
+                    datasets: finalDatasets
                 },
                 options: {
                     responsive: true,
@@ -1554,11 +1688,24 @@
                 };
             });
 
+            // Add comparison overlay if active
+            const finalDatasets = addComparisonOverlay(days, datasets, metric, (day) => {
+                const goalName = Array.from(bipNames)[0];
+                const goal = day.bipGoals.find(g => g.name === goalName);
+                if (!goal) return 0;
+                switch (metric) {
+                    case 'frequency': return goal.frequency;
+                    case 'duration': return goal.duration;
+                    case 'intensity': return goal.intensity;
+                    default: return goal.frequency;
+                }
+            });
+
             charts.bipGoals = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: days.map(d => d.date.toLocaleDateString()),
-                    datasets
+                    datasets: finalDatasets
                 },
                 options: {
                     responsive: true,
