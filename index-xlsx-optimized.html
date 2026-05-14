@@ -498,9 +498,27 @@
                         <div class="stat-value" id="dayCount">0</div>
                         <div class="stat-label">Days Shown</div>
                     </div>
-                    <div class="stat-pill">
-                        <div class="stat-value" id="dateRange" style="font-size: 0.95rem;">-</div>
+                    <div class="stat-pill" style="position: relative;">
+                        <div class="stat-value" id="dateRange" style="font-size: 0.95rem; cursor: pointer;" onclick="toggleHeaderDateEditor()">-</div>
                         <div class="stat-label">Date Range</div>
+                        <button class="chart-print-btn" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem;" onclick="toggleHeaderDateEditor()">✎</button>
+                    </div>
+                </div>
+
+                <div id="headerDateEditor" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 16px; margin-top: 8px; box-shadow: var(--shadow-lg); z-index: 10;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">From:</label>
+                            <input type="date" id="headerStartDate" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">To:</label>
+                            <input type="date" id="headerEndDate" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn" onclick="applyHeaderDateFilter()" style="flex: 1; font-size: 0.9rem; padding: 8px;">Apply</button>
+                        <button class="btn btn-secondary" onclick="toggleHeaderDateEditor()" style="flex: 1; font-size: 0.9rem; padding: 8px;">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -711,18 +729,33 @@
                 <div id="settings" class="tab-content">
                     <div class="controls-panel">
                         <div class="control-group">
-                            <label><strong>Date Range Filter:</strong></label>
+                            <label><strong>Quick Date Presets:</strong></label>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px;">
+                                <button class="btn btn-secondary" onclick="applyQuickDateFilter(7)">Last 7 Days</button>
+                                <button class="btn btn-secondary" onclick="applyQuickDateFilter(30)">Last Month</button>
+                                <button class="btn btn-secondary" onclick="applyQuickDateFilter(60)">Last 2 Months</button>
+                                <button class="btn btn-secondary" onclick="applyQuickDateFilter(90)">Last 3 Months</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <label><strong>Custom Date Range Filter:</strong></label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                 <div>
                                     <label for="filterStartDate">Start Date:</label>
-                                    <input type="date" id="filterStartDate" onchange="applyDateFilter()">
+                                    <input type="date" id="filterStartDate">
                                 </div>
                                 <div>
                                     <label for="filterEndDate">End Date:</label>
-                                    <input type="date" id="filterEndDate" onchange="applyDateFilter()">
+                                    <input type="date" id="filterEndDate">
                                 </div>
                             </div>
-                            <button class="btn" onclick="resetDateFilter()" style="margin-top: 10px;">Reset to Full Range</button>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button class="btn" onclick="applyDateFilter()">Apply Filter</button>
+                                <button class="btn btn-secondary" onclick="resetDateFilter()">Reset to Full Range</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1164,7 +1197,7 @@
         }
 
         const COMPARISON_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
-        const SLOT_LABELS = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
+        const SLOT_LABELS = ['Arrival', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dismissal'];
 
         function buildDateSelectionArea() {
             const area = document.getElementById('dateSelectionArea');
@@ -1350,11 +1383,29 @@
             }
         }
 
+        function applyQuickDateFilter(days) {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - days);
+
+            document.getElementById('filterStartDate').value = dateToInputValue(startDate);
+            document.getElementById('filterEndDate').value = dateToInputValue(endDate);
+            applyDateFilter();
+        }
+
         function applyDateFilter() {
             const startDate = inputValueToDate(document.getElementById('filterStartDate').value);
             const endDate = inputValueToDate(document.getElementById('filterEndDate').value);
 
-            if (!startDate || !endDate) return;
+            if (!startDate || !endDate) {
+                showMessage('Please select both start and end dates', 'error');
+                return;
+            }
+
+            if (startDate > endDate) {
+                showMessage('Start date must be before end date', 'error');
+                return;
+            }
 
             const startKey = dateKey(startDate);
             const endKey = dateKey(endDate);
@@ -1365,6 +1416,8 @@
             });
 
             document.getElementById('dayCount').textContent = filteredDays.length;
+            document.getElementById('dateRange').textContent = `${startDate.toLocaleDateString()} → ${endDate.toLocaleDateString()}`;
+            showMessage(`✓ Filter applied: ${filteredDays.length} days shown`, 'success');
             refreshCharts();
         }
 
@@ -1373,6 +1426,8 @@
             document.getElementById('filterStartDate').value = dateToInputValue(studentData.dateRange.start);
             document.getElementById('filterEndDate').value = dateToInputValue(studentData.dateRange.end);
             document.getElementById('dayCount').textContent = studentData.days.length;
+            document.getElementById('dateRange').textContent = `${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}`;
+            showMessage('✓ Filter reset to full date range', 'success');
             refreshCharts();
         }
 
@@ -2282,6 +2337,37 @@
             if (type === 'error' || type === 'success') {
                 setTimeout(() => div.remove(), 5000);
             }
+        }
+
+        function toggleHeaderDateEditor() {
+            const editor = document.getElementById('headerDateEditor');
+            if (editor.style.display === 'none') {
+                editor.style.display = 'block';
+                document.getElementById('headerStartDate').value = document.getElementById('filterStartDate').value;
+                document.getElementById('headerEndDate').value = document.getElementById('filterEndDate').value;
+            } else {
+                editor.style.display = 'none';
+            }
+        }
+
+        function applyHeaderDateFilter() {
+            const startDate = inputValueToDate(document.getElementById('headerStartDate').value);
+            const endDate = inputValueToDate(document.getElementById('headerEndDate').value);
+
+            if (!startDate || !endDate) {
+                showMessage('Please select both dates', 'error');
+                return;
+            }
+
+            if (startDate > endDate) {
+                showMessage('Start date must be before end date', 'error');
+                return;
+            }
+
+            document.getElementById('filterStartDate').value = document.getElementById('headerStartDate').value;
+            document.getElementById('filterEndDate').value = document.getElementById('headerEndDate').value;
+            toggleHeaderDateEditor();
+            applyDateFilter();
         }
 
         function clearData() {
