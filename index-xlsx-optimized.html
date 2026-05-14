@@ -1881,7 +1881,7 @@
             }
 
             const chartTitle = document.querySelector('#timeofday .chart-title');
-            if (chartTitle) chartTitle.textContent = `⏰ Time-of-Day Patterns — ${label}`;
+            if (chartTitle) chartTitle.textContent = `⏰ Time-of-Day Patterns${label ? ' — ' + label : ''}`;
 
             charts.timeOfDay = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
