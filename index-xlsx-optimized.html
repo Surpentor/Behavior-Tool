@@ -1306,8 +1306,8 @@
                 for (let slot = 0; slot < 25; slot++) {
                     let sum = 0, count = 0;
                     Object.values(day.categories || {}).forEach(cd => {
-                        if (cd && cd.slots && cd.slots[slot] !== undefined) {
-                            sum += cd.slots[slot] || 0;
+                        if (cd && cd.slots && cd.slots[slot] != null) {
+                            sum += cd.slots[slot];
                             count++;
                         }
                     });
