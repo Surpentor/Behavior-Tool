@@ -1032,20 +1032,24 @@
                 if (!catRow) continue;
                 const slots = [];
                 let total = 0;
+                let presentSlots = 0;
                 for (let j = 1; j <= 25; j++) {
                     let v = catRow[j];
                     if (v === null || v === undefined || v === '') {
-                        v = 0;
+                        slots.push(null);
                     } else {
                         v = parseFloat(v) || 0;
+                        slots.push(v);
+                        total += v;
+                        presentSlots++;
                     }
-                    slots.push(v);
-                    total += v;
                 }
+                const percentage = presentSlots > 0 ? (total / presentSlots) * 100 : 0;
                 block.categories[catName] = {
                     slots,
                     total,
-                    percentage: (total / 25) * 100
+                    presentSlots,
+                    percentage
                 };
             }
 
@@ -1058,27 +1062,37 @@
                 const row = sheetData[startRow + off];
                 let label = '', value = 0;
                 const slots = [];
+                let presentSlots = 0;
                 if (row && row[0] !== undefined && row[0] !== null && row[0] !== '') {
                     label = cleanTrackingLabel(row[0]);
                     value = parseFloat(row[26]) || 0;
                 }
-                for (let j = 1; j <= 25; j++) slots.push(parseFloat((row && row[j]) || 0) || 0);
-                block.tracking.push({ label, value, slots });
+                for (let j = 1; j <= 25; j++) {
+                    let v = row && row[j];
+                    if (v === null || v === undefined || v === '') {
+                        slots.push(null);
+                    } else {
+                        v = parseFloat(v) || 0;
+                        slots.push(v);
+                        presentSlots++;
+                    }
+                }
+                block.tracking.push({ label, value, slots, presentSlots });
             }
 
             for (let j = startRow + 10; j < Math.min(startRow + 22, sheetData.length); j++) {
                 const row = sheetData[j];
                 if (row && row[0] && String(row[0]).toUpperCase().includes('BIP')) {
                     const goalName = String(row[0]).replace(/\s+/g, ' ').trim();
-                    const readSlots = r => { const a = []; for (let s = 1; s <= 25; s++) a.push(parseFloat((r && r[s]) || 0) || 0); return a; };
+                    const readSlots = r => { const a = []; for (let s = 1; s <= 25; s++) { const v = r && r[s]; a.push(v === null || v === undefined || v === '' ? null : parseFloat(v) || 0); } return a; };
                     const goal = { name: goalName, frequency: 0, duration: 0, intensity: 0, freqSlots: [], durSlots: [], intenSlots: [] };
 
                     if (sheetData[j + 1]) { goal.frequency = parseFloat(sheetData[j + 1][26]) || 0; goal.freqSlots = readSlots(sheetData[j + 1]); }
-                    else { goal.freqSlots = new Array(25).fill(0); }
+                    else { goal.freqSlots = new Array(25).fill(null); }
                     if (sheetData[j + 2]) { goal.duration = parseFloat(sheetData[j + 2][26]) || 0; goal.durSlots = readSlots(sheetData[j + 2]); }
-                    else { goal.durSlots = new Array(25).fill(0); }
+                    else { goal.durSlots = new Array(25).fill(null); }
                     if (sheetData[j + 3]) { goal.intensity = parseFloat(sheetData[j + 3][26]) || 0; goal.intenSlots = readSlots(sheetData[j + 3]); }
-                    else { goal.intenSlots = new Array(25).fill(0); }
+                    else { goal.intenSlots = new Array(25).fill(null); }
 
                     block.bipGoals.push(goal);
                     j += 3;
@@ -2121,7 +2135,7 @@
                 let sum = 0, count = 0;
                 days.forEach(day => {
                     Object.values(day.categories || {}).forEach(cd => {
-                        if (cd && cd.slots && cd.slots[slot] !== undefined) { sum += cd.slots[slot] || 0; count++; }
+                        if (cd && cd.slots && cd.slots[slot] != null) { sum += cd.slots[slot]; count++; }
                     });
                 });
                 slotAvgs.push(count > 0 ? sum / count : 0);
