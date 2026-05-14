@@ -376,19 +376,38 @@
             const block = {
                 categories: {},
                 additionalTracking: {},
-                bipGoals: [],
-                timeSlotScores: []
+                bipGoals: []
             };
 
             if (startRow + 22 >= sheetData.length) return null;
 
-            const dateRow = sheetData[startRow];
-            const categoryRows = {
-                'Complete Work': sheetData[startRow + 1],
-                'Hands, Body, Objects to self': sheetData[startRow + 2],
-                'Stay in Designated area': sheetData[startRow + 3],
-                'App. language/conversations': sheetData[startRow + 4] || sheetData[startRow + 4]
-            };
+            // Extract category rows (next 4 rows after date)
+            const categoryRows = {};
+            const categoryNames = [
+                'Complete Work',
+                'Hands, Body, Objects to self',
+                'Stay in Designated area',
+                'App. language/conversations'
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const catRow = sheetData[startRow + 1 + i];
+                if (catRow && catRow[0]) {
+                    const rowLabel = String(catRow[0]).toLowerCase();
+                    let matched = false;
+                    for (const catName of categoryNames) {
+                        if (rowLabel.includes(catName.toLowerCase().substring(0, 8))) {
+                            categoryRows[catName] = catRow;
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched && i < 4) {
+                        // Fallback: use position
+                        categoryRows[categoryNames[i]] = catRow;
+                    }
+                }
+            }
 
             // Parse each category (cols 1-25 are time slots)
             for (const [catName, catRow] of Object.entries(categoryRows)) {
@@ -396,7 +415,12 @@
                 const slots = [];
                 let total = 0;
                 for (let j = 1; j <= 25; j++) {
-                    const v = parseFloat(catRow[j]) || 0;
+                    let v = catRow[j];
+                    if (v === null || v === undefined || v === '') {
+                        v = 0;
+                    } else {
+                        v = parseFloat(v) || 0;
+                    }
                     slots.push(v);
                     total += v;
                 }
@@ -407,27 +431,51 @@
                 };
             }
 
-            // Parse additional tracking (col 26)
-            if (sheetData[startRow + 7]) block.additionalTracking['Sleeping (min)'] = parseFloat(sheetData[startRow + 7][26]) || 0;
-            if (sheetData[startRow + 8]) block.additionalTracking['Arguing'] = parseFloat(sheetData[startRow + 8][26]) || 0;
-            if (sheetData[startRow + 9]) block.additionalTracking['Custom'] = parseFloat(sheetData[startRow + 9][26]) || 0;
+            // Validate we got categories
+            if (Object.keys(block.categories).length === 0) {
+                return null;
+            }
 
-            // Parse BIP Goals (dynamic - look for "BIP Goal:" rows)
-            for (let j = 10; j < startRow + 22; j++) {
+            // Parse additional tracking (col 26, offset by 7-9)
+            if (startRow + 7 < sheetData.length) {
+                const row = sheetData[startRow + 7];
+                if (row && row[0] && row[0].toLowerCase().includes('sleep')) {
+                    block.additionalTracking['Sleeping (min)'] = parseFloat(row[26]) || 0;
+                }
+            }
+            if (startRow + 8 < sheetData.length) {
+                const row = sheetData[startRow + 8];
+                if (row && row[0] && row[0].toLowerCase().includes('argu')) {
+                    block.additionalTracking['Arguing'] = parseFloat(row[26]) || 0;
+                }
+            }
+            if (startRow + 9 < sheetData.length) {
+                const row = sheetData[startRow + 9];
+                if (row && row[0] && row[0].toLowerCase().includes('insert')) {
+                    block.additionalTracking['Custom'] = parseFloat(row[26]) || 0;
+                }
+            }
+
+            // Parse BIP Goals (look for rows containing "BIP")
+            for (let j = startRow + 10; j < Math.min(startRow + 22, sheetData.length); j++) {
                 const row = sheetData[j];
-                if (row && row[0] && (row[0].includes('BIP') || row[0].includes('BIP Behavior'))) {
-                    const goalName = row[0].trim();
-                    const goal = { name: goalName };
+                if (row && row[0] && String(row[0]).includes('BIP')) {
+                    const goalName = String(row[0]).trim();
+                    const goal = { name: goalName, frequency: 0, duration: 0, intensity: 0 };
 
-                    // Next 3 rows should be Frequency, Duration, Intensity
-                    if (j + 3 < sheetData.length) {
-                        if (sheetData[j + 1]) goal.frequency = parseFloat(sheetData[j + 1][26]) || 0;
-                        if (sheetData[j + 2]) goal.duration = parseFloat(sheetData[j + 2][26]) || 0;
-                        if (sheetData[j + 3]) goal.intensity = parseFloat(sheetData[j + 3][26]) || 0;
+                    // Next rows should be Frequency, Duration, Intensity
+                    if (j + 1 < sheetData.length && sheetData[j + 1] && sheetData[j + 1][26] !== undefined) {
+                        goal.frequency = parseFloat(sheetData[j + 1][26]) || 0;
                     }
-                    if (goal.frequency !== undefined) {
-                        block.bipGoals.push(goal);
+                    if (j + 2 < sheetData.length && sheetData[j + 2] && sheetData[j + 2][26] !== undefined) {
+                        goal.duration = parseFloat(sheetData[j + 2][26]) || 0;
                     }
+                    if (j + 3 < sheetData.length && sheetData[j + 3] && sheetData[j + 3][26] !== undefined) {
+                        goal.intensity = parseFloat(sheetData[j + 3][26]) || 0;
+                    }
+
+                    block.bipGoals.push(goal);
+                    j += 3; // Skip the next 3 rows (Frequency, Duration, Intensity)
                 }
             }
 
@@ -507,18 +555,34 @@
             const ctx = document.getElementById('categoryTrend').getContext('2d');
             if (charts.categoryTrend) charts.categoryTrend.destroy();
 
-            const categories = Object.keys(studentData.days[0].categories);
+            // Find first day with categories
+            let firstDay = null;
+            for (const day of studentData.days) {
+                if (day.categories && Object.keys(day.categories).length > 0) {
+                    firstDay = day;
+                    break;
+                }
+            }
+
+            if (!firstDay) {
+                ctx.fillText('No category data available', 50, 50);
+                return;
+            }
+
+            const categories = Object.keys(firstDay.categories);
             const datasets = categories.map((cat, idx) => {
                 const data = studentData.days.map(day => {
-                    const catData = day.categories[cat];
-                    return metric === 'percentage' ? catData.percentage : catData.total;
+                    if (day.categories && day.categories[cat]) {
+                        return metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
+                    }
+                    return 0;
                 });
                 const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
                 return {
                     label: cat,
                     data,
-                    borderColor: colors[idx],
-                    backgroundColor: colors[idx] + '20',
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length] + '20',
                     tension: 0.4,
                     fill: false,
                     borderWidth: 2
@@ -544,14 +608,32 @@
             const ctx = document.getElementById('categoryPerformance').getContext('2d');
             if (charts.categoryPerformance) charts.categoryPerformance.destroy();
 
-            const categories = Object.keys(studentData.days[0].categories);
+            // Find first day with categories
+            let firstDay = null;
+            for (const day of studentData.days) {
+                if (day.categories && Object.keys(day.categories).length > 0) {
+                    firstDay = day;
+                    break;
+                }
+            }
+
+            if (!firstDay) {
+                ctx.fillText('No category data available', 50, 50);
+                return;
+            }
+
+            const categories = Object.keys(firstDay.categories);
             const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
             const avgData = categories.map(cat => {
-                const sum = studentData.days.reduce((s, day) => {
-                    const catData = day.categories[cat];
-                    return s + (metric === 'percentage' ? catData.percentage : catData.total);
-                }, 0);
-                return sum / studentData.days.length;
+                let sum = 0;
+                let count = 0;
+                studentData.days.forEach(day => {
+                    if (day.categories && day.categories[cat]) {
+                        sum += metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
+                        count++;
+                    }
+                });
+                return count > 0 ? sum / count : 0;
             });
 
             charts.categoryPerformance = new Chart(ctx, {
@@ -561,7 +643,7 @@
                     datasets: [{
                         label: metric === 'percentage' ? 'Average %' : 'Average Points',
                         data: avgData,
-                        backgroundColor: colors
+                        backgroundColor: colors.slice(0, categories.length)
                     }]
                 },
                 options: {
@@ -580,12 +662,18 @@
             const avgPerSlot = [];
             for (let slot = 0; slot < timeSlots; slot++) {
                 let sum = 0;
+                let count = 0;
                 studentData.days.forEach(day => {
-                    Object.values(day.categories).forEach(catData => {
-                        sum += catData.slots[slot] || 0;
-                    });
+                    if (day.categories) {
+                        Object.values(day.categories).forEach(catData => {
+                            if (catData && catData.slots && catData.slots[slot] !== undefined) {
+                                sum += catData.slots[slot] || 0;
+                                count++;
+                            }
+                        });
+                    }
                 });
-                avgPerSlot.push(sum / (studentData.days.length * 4)); // 4 categories
+                avgPerSlot.push(count > 0 ? sum / count : 0);
             }
 
             const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
