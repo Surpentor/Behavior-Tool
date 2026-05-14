@@ -66,6 +66,7 @@
         #fileInput { display: none; }
 
         .error { background: var(--danger-color); color: white; padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; }
+        .success { background: var(--secondary-color); color: white; padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; }
         .dashboard { display: none; }
         .dashboard.active { display: block; }
 
@@ -77,10 +78,12 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 1rem;
-            margin-bottom: 20px;
+            margin-right: 10px;
             transition: all 0.3s ease;
         }
         .clear-button:hover, .print-btn:hover { background-color: #2563eb; }
+        .print-btn { background-color: var(--secondary-color); }
+        .print-btn:hover { background-color: #059669; }
 
         .dashboard-header {
             background: white;
@@ -91,16 +94,109 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         .dashboard-header h2 { font-size: 2rem; margin-bottom: 5px; }
         .dashboard-header .location { color: var(--text-secondary); }
 
-        .metric-toggle {
+        .tabs-container {
             background: white;
-            padding: 15px 20px;
             border-radius: 12px;
             margin-bottom: 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover { color: var(--primary-color); }
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active { display: block; }
+
+        .controls-panel {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .control-group input[type="date"],
+        .control-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .metric-toggle {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            margin-bottom: 0;
+            box-shadow: none;
             display: flex;
             gap: 10px;
             align-items: center;
@@ -113,6 +209,8 @@
             padding: 8px 12px;
             border-radius: 6px;
             transition: all 0.3s ease;
+            margin: 0;
+            font-weight: normal;
         }
         .metric-toggle input[type="radio"] { cursor: pointer; }
         .metric-toggle label:hover { background: var(--light-bg); }
@@ -123,14 +221,37 @@
             gap: 30px;
             margin-bottom: 30px;
         }
+
         .chart-container {
             background: white;
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             min-height: 400px;
+            position: relative;
         }
-        .chart-title { font-size: 1.1rem; margin-bottom: 20px; color: var(--text-primary); }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title { font-size: 1.1rem; color: var(--text-primary); margin: 0; }
+
+        .chart-print-btn {
+            background: var(--warning-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .chart-print-btn:hover { background: #d97706; }
 
         .data-quality {
             background: white;
@@ -155,10 +276,34 @@
             font-style: italic;
         }
 
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #059669; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #dc2626; }
+
         @page { size: 8.5in 11in; margin: 0.5in; }
         @media print {
             body { background: white; }
-            .header, .clear-button, .metric-toggle, .upload-area {
+            .header, .clear-button, .metric-toggle, .upload-area, .tabs-container, .controls-panel, .button-group {
                 display: none !important;
             }
             .dashboard { margin: 0; padding: 0; }
@@ -166,6 +311,15 @@
         }
 
         @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+
+        .date-comparison-note {
+            background: #dbeafe;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: #1e40af;
+            font-size: 0.95rem;
+        }
     </style>
 </head>
 <body>
@@ -187,7 +341,11 @@
         <div id="messageArea"></div>
 
         <div id="dashboard" class="dashboard">
-            <button class="clear-button" onclick="clearData()">← Load Different File</button>
+            <div class="button-group">
+                <button class="clear-button" onclick="clearData()">← Load Different File</button>
+                <button class="print-btn" onclick="window.print()">🖨️ Print Current Tab</button>
+                <button class="print-btn btn-secondary" onclick="printFullSummary()">📄 Print Full Summary</button>
+            </div>
 
             <div class="dashboard-header">
                 <div>
@@ -200,88 +358,233 @@
                 </div>
             </div>
 
-            <div class="metric-toggle">
-                <strong>Display metric:</strong>
-                <label>
-                    <input type="radio" name="metric" value="percentage" checked onchange="refreshCharts()">
-                    <span>Percentage (%)</span>
-                </label>
-                <label>
-                    <input type="radio" name="metric" value="raw" onchange="refreshCharts()">
-                    <span>Raw Points</span>
-                </label>
-            </div>
-
             <div class="data-quality" id="dataQualityPanel" style="display: none;">
                 <h3>⚠️ Data Quality Issues</h3>
                 <div id="dataQualityList"></div>
             </div>
 
-            <div class="charts-grid" id="chartsGrid">
-                <div class="chart-container">
-                    <h3 class="chart-title">📈 Behavior Categories Over Time</h3>
-                    <canvas id="categoryTrend"></canvas>
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="categories">📈 Categories</button>
+                    <button class="tab-button" data-tab="timeofday">⏰ Time-of-Day</button>
+                    <button class="tab-button" data-tab="bipgoals">🎯 BIP Goals</button>
+                    <button class="tab-button" data-tab="tracking">📊 Custom Tracking</button>
+                    <button class="tab-button" data-tab="comparisons">📍 Date Comparison</button>
+                    <button class="tab-button" data-tab="settings">⚙️ Settings</button>
                 </div>
 
-                <div class="chart-container">
-                    <h3 class="chart-title">📊 Category Performance</h3>
-                    <canvas id="categoryPerformance"></canvas>
+                <!-- Categories Tab -->
+                <div id="categories" class="tab-content active">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <strong>Display metric:</strong>
+                            <div class="metric-toggle" style="margin-top: 10px;">
+                                <label>
+                                    <input type="radio" name="metric" value="percentage" checked onchange="refreshCharts()">
+                                    <span>Percentage (%)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="metric" value="raw" onchange="refreshCharts()">
+                                    <span>Raw Points</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <label><strong>Filter by Categories:</strong></label>
+                            <div class="checkbox-group" id="categoryCheckboxes"></div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3 class="chart-title">📈 Behavior Categories Over Time</h3>
+                                <button class="chart-print-btn" onclick="printChart('categoryTrend')">Print</button>
+                            </div>
+                            <canvas id="categoryTrend"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3 class="chart-title">📊 Category Performance</h3>
+                                <button class="chart-print-btn" onclick="printChart('categoryPerformance')">Print</button>
+                            </div>
+                            <canvas id="categoryPerformance"></canvas>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="chart-container">
-                    <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
-                    <canvas id="timeOfDay"></canvas>
+                <!-- Time-of-Day Tab -->
+                <div id="timeofday" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <strong>Display metric:</strong>
+                            <div class="metric-toggle" style="margin-top: 10px;">
+                                <label>
+                                    <input type="radio" name="metric-tod" value="percentage" checked onchange="refreshCharts()">
+                                    <span>Percentage (%)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="metric-tod" value="raw" onchange="refreshCharts()">
+                                    <span>Raw Points</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container" style="grid-column: 1 / -1;">
+                            <div class="chart-header">
+                                <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
+                                <button class="chart-print-btn" onclick="printChart('timeOfDay')">Print</button>
+                            </div>
+                            <canvas id="timeOfDay"></canvas>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="chart-container">
-                    <h3 class="chart-title">🎯 BIP Goals Tracking</h3>
-                    <canvas id="bipGoals"></canvas>
+                <!-- BIP Goals Tab -->
+                <div id="bipgoals" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <strong>Display metric:</strong>
+                            <div class="metric-toggle" style="margin-top: 10px;">
+                                <label>
+                                    <input type="radio" name="metric-bip" value="frequency" checked onchange="refreshCharts()">
+                                    <span>Frequency</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="metric-bip" value="duration" onchange="refreshCharts()">
+                                    <span>Duration (min)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="metric-bip" value="intensity" onchange="refreshCharts()">
+                                    <span>Intensity (1-5)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container" style="grid-column: 1 / -1;">
+                            <div class="chart-header">
+                                <h3 class="chart-title">🎯 BIP Goals Tracking</h3>
+                                <button class="chart-print-btn" onclick="printChart('bipGoals')">Print</button>
+                            </div>
+                            <canvas id="bipGoals"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="bipDetailCharts"></div>
+                </div>
+
+                <!-- Custom Tracking Tab -->
+                <div id="tracking" class="tab-content">
+                    <div id="customTrackingCharts"></div>
+                </div>
+
+                <!-- Date Comparison Tab -->
+                <div id="comparisons" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="date-comparison-note">
+                            💡 Select up to 5 dates to compare their hourly patterns on the same chart
+                        </div>
+                        <div class="control-group">
+                            <label><strong>Select dates to compare:</strong></label>
+                            <div id="dateSelectionArea"></div>
+                            <button class="btn btn-secondary" onclick="generateComparisonChart()" style="margin-top: 10px;">Generate Comparison Chart</button>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container" style="grid-column: 1 / -1;">
+                            <div class="chart-header">
+                                <h3 class="chart-title">📍 Hourly Pattern Comparison</h3>
+                                <button class="chart-print-btn" onclick="printChart('comparisonChart')">Print</button>
+                            </div>
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <label><strong>Date Range Filter:</strong></label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label for="filterStartDate">Start Date:</label>
+                                    <input type="date" id="filterStartDate" onchange="applyDateFilter()">
+                                </div>
+                                <div>
+                                    <label for="filterEndDate">End Date:</label>
+                                    <input type="date" id="filterEndDate" onchange="applyDateFilter()">
+                                </div>
+                            </div>
+                            <button class="btn" onclick="resetDateFilter()" style="margin-top: 10px;">Reset to Full Range</button>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <label><strong>Adjust Date:</strong></label>
+                            <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.9rem;">Select a date to view and optionally adjust it</p>
+                            <select id="dateSelector" onchange="selectDateToAdjust()">
+                                <option value="">-- Select a date --</option>
+                            </select>
+                            <div id="dateAdjustmentPanel" style="display: none; margin-top: 15px; padding: 15px; background: #f0fdf4; border-radius: 6px;">
+                                <p id="selectedDateInfo" style="margin-bottom: 10px;"></p>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <label for="adjustedDate">New Date:</label>
+                                        <input type="date" id="adjustedDate">
+                                    </div>
+                                    <div style="display: flex; align-items: flex-end; gap: 10px;">
+                                        <button class="btn btn-secondary" onclick="applyDateAdjustment()">Apply Adjustment</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div id="customTrackingCharts"></div>
         </div>
     </div>
 
     <script>
         let studentData = null;
-        let rawData = null;
+        let filteredDays = null;
+        let selectedDatesForComparison = new Set();
         let charts = {};
-        const metricValues = { percentage: 'percentage', raw: 'raw' };
+        let allCategoryNames = [];
+        let enabledCategories = new Set();
 
-        async function handleFileUpload(event) {
+        function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             showMessage('Processing file...', 'loading');
             try {
-                const data = await parseXlsxFile(file);
-                studentData = data;
-                initializeDashboard();
-                document.getElementById('uploadSection').style.display = 'none';
-                document.getElementById('dashboard').classList.add('active');
-                showMessage('File loaded successfully!', 'success');
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
+                    studentData = parseMultiSheetXlsx(workbook);
+                    filteredDays = [...studentData.days];
+                    initializeDashboard();
+                    document.getElementById('uploadSection').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    showMessage('File loaded successfully!', 'success');
+                };
+                reader.onerror = () => showMessage('Failed to read file', 'error');
+                reader.readAsBinaryString(file);
             } catch (error) {
                 showMessage(`Error: ${error.message}`, 'error');
                 console.error(error);
             }
-        }
-
-        async function parseXlsxFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
-                        const parsed = parseMultiSheetXlsx(workbook);
-                        resolve(parsed);
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.onerror = () => reject(new Error('Failed to read file'));
-                reader.readAsBinaryString(file);
-            });
         }
 
         function parseMultiSheetXlsx(workbook) {
@@ -289,7 +592,6 @@
             let studentName = 'Unknown';
             let studentLocation = 'Unknown';
             const allDays = [];
-            // correctionCounts: { "Sheet|month": n, "Sheet|year": n }
             const correctionCounts = {};
 
             for (const sheetName of sheetNames) {
@@ -300,14 +602,12 @@
 
                 if (sheetData.length < 5) continue;
 
-                // Extract student name from row 1
                 if (sheetData[0] && sheetData[0][0]) {
                     studentName = sheetData[0][0];
                 }
 
-                // Scan every row for a date in column A (start of a day block)
                 const sheetDays = [];
-                let i = 1; // skip the student-name row
+                let i = 1;
                 while (i < sheetData.length) {
                     const row = sheetData[i];
                     if (!row || row[0] === undefined || row[0] === null || row[0] === '') {
@@ -315,8 +615,6 @@
                         continue;
                     }
 
-                    // Stop at the "Monthly Report" summary block at the bottom
-                    // of each month sheet — that data is ignored on purpose.
                     if (String(row[0]).trim().toLowerCase().startsWith('monthly report')) {
                         break;
                     }
@@ -327,10 +625,8 @@
                         continue;
                     }
 
-                    // Found a date block
                     let date = new Date(cellDate.getTime());
 
-                    // Auto-correct bad dates: snap month to the sheet's month
                     const sheetMonth = parseMonthFromSheetName(sheetName);
                     if (sheetMonth !== null && date.getMonth() !== sheetMonth) {
                         date.setMonth(sheetMonth);
@@ -343,13 +639,12 @@
                         dayBlock.date = date;
                         dayBlock.sheet = sheetName;
                         sheetDays.push(dayBlock);
-                        i += 22; // skip past the rest of this block
+                        i += 22;
                     } else {
                         i++;
                     }
                 }
 
-                // Auto-correct years: snap outliers to this sheet's dominant year
                 if (sheetDays.length > 0) {
                     const yearCounts = {};
                     sheetDays.forEach(d => {
@@ -373,7 +668,6 @@
 
             allDays.sort((a, b) => a.date - b.date);
 
-            // Drop BIP goals that have no activity on any day (template placeholders)
             const bipActivity = {};
             allDays.forEach(day => {
                 day.bipGoals.forEach(g => {
@@ -385,10 +679,6 @@
                 day.bipGoals = day.bipGoals.filter(g => (bipActivity[g.name] || 0) > 0);
             });
 
-            // Custom tracking is keyed by slot position (0/1/2). For each slot,
-            // pick the most common label spelling and total its activity; keep
-            // only slots that have non-zero data on at least one day (this drops
-            // unused "[insert tracking here]" placeholder rows).
             const trackingMeta = [];
             for (let slot = 0; slot < 3; slot++) {
                 const labelCounts = {};
@@ -406,7 +696,6 @@
                 }
             }
 
-            // Build human-readable data quality summary
             const dataQualityIssues = [];
             Object.entries(correctionCounts).forEach(([key, count]) => {
                 const [sheet, type] = key.split('|');
@@ -431,21 +720,16 @@
             };
         }
 
-        // Convert a cell value into a JS Date, handling Date objects,
-        // Excel serial numbers, and date strings. Returns null if not a date.
         function toDate(val) {
             if (val instanceof Date) {
                 return isNaN(val.getTime()) ? null : val;
             }
             if (typeof val === 'number' && val > 0 && val < 100000) {
-                // Excel serial date: days since 1899-12-30
                 const d = new Date(Math.round((val - 25569) * 86400 * 1000));
                 return isNaN(d.getTime()) ? null : d;
             }
             if (typeof val === 'string') {
                 const s = val.trim();
-                // Must look date-like (contains a digit and a / or -) to avoid
-                // matching text labels like category names.
                 if (s && /\d/.test(s) && /[\/\-]/.test(s)) {
                     const d = new Date(s);
                     return isNaN(d.getTime()) ? null : d;
@@ -456,32 +740,19 @@
 
         function parseMonthFromSheetName(name) {
             const months = {
-                'January': 0, 'Jan': 0,
-                'February': 1, 'Feb': 1,
-                'March': 2, 'Mar': 2,
-                'April': 3, 'Apr': 3,
-                'May': 4,
-                'June': 5, 'Jun': 5,
-                'July': 6, 'Jul': 6,
-                'August': 7, 'Aug': 7,
-                'September': 8, 'Sep': 8, 'Septemb': 8,
-                'October': 9, 'Oct': 9,
-                'November': 10, 'Nov': 10,
-                'December': 11, 'Dec': 11
+                'January': 0, 'Jan': 0, 'February': 1, 'Feb': 1, 'March': 2, 'Mar': 2,
+                'April': 3, 'Apr': 3, 'May': 4, 'June': 5, 'Jun': 5, 'July': 6, 'Jul': 6,
+                'August': 7, 'Aug': 7, 'September': 8, 'Sep': 8, 'Septemb': 8,
+                'October': 9, 'Oct': 9, 'November': 10, 'Nov': 10, 'December': 11, 'Dec': 11
             };
             return months[name] !== undefined ? months[name] : null;
         }
 
         function parseDayBlock(sheetData, startRow, sheetName) {
-            const block = {
-                categories: {},
-                tracking: [],
-                bipGoals: []
-            };
+            const block = { categories: {}, tracking: [], bipGoals: [] };
 
             if (startRow + 22 >= sheetData.length) return null;
 
-            // Extract category rows (next 4 rows after date)
             const categoryRows = {};
             const categoryNames = [
                 'Complete Work',
@@ -503,13 +774,11 @@
                         }
                     }
                     if (!matched && i < 4) {
-                        // Fallback: use position
                         categoryRows[categoryNames[i]] = catRow;
                     }
                 }
             }
 
-            // Parse each category (cols 1-25 are time slots)
             for (const [catName, catRow] of Object.entries(categoryRows)) {
                 if (!catRow) continue;
                 const slots = [];
@@ -531,17 +800,10 @@
                 };
             }
 
-            // Validate we got categories
             if (Object.keys(block.categories).length === 0) {
                 return null;
             }
 
-            // Parse the 3 custom tracking rows (offsets +7, +8, +9).
-            // Labels are student-specific AND often typed inconsistently from
-            // month to month ("Sleeping" vs "Sleeping in minutes"), so we key
-            // these by POSITION (slot 0/1/2) — the row position is always the
-            // same metric. The label is kept per-day so we can pick the most
-            // common spelling later. The daily value is the Total in column 26.
             block.tracking = [];
             for (let off = 7; off <= 9; off++) {
                 const row = sheetData[startRow + off];
@@ -553,16 +815,12 @@
                 block.tracking.push({ label, value });
             }
 
-            // Parse BIP Goals. Header rows are at offsets +10, +14, +18 and
-            // each is followed by Frequency / Duration / Intensity rows.
-            // Match is case-insensitive ("BIP Goal:" or "Bip Goal:").
             for (let j = startRow + 10; j < Math.min(startRow + 22, sheetData.length); j++) {
                 const row = sheetData[j];
                 if (row && row[0] && String(row[0]).toUpperCase().includes('BIP')) {
                     const goalName = String(row[0]).replace(/\s+/g, ' ').trim();
                     const goal = { name: goalName, frequency: 0, duration: 0, intensity: 0 };
 
-                    // Next 3 rows are Frequency, Duration, Intensity (Total in col 26)
                     if (sheetData[j + 1] && sheetData[j + 1][26] !== undefined) {
                         goal.frequency = parseFloat(sheetData[j + 1][26]) || 0;
                     }
@@ -574,16 +832,13 @@
                     }
 
                     block.bipGoals.push(goal);
-                    j += 3; // Skip the Frequency/Duration/Intensity rows
+                    j += 3;
                 }
             }
 
             return block;
         }
 
-        // Clean a custom-tracking row label into a readable metric name.
-        // "[insert tracking here] ex: sleeping minutes" -> "Sleeping minutes"
-        // "Sleeping in minutes" -> "Sleeping in minutes"
         function cleanTrackingLabel(raw) {
             let s = String(raw).replace(/\s+/g, ' ').trim();
             s = s.replace(/\[insert tracking here\]/ig, '').trim();
@@ -591,6 +846,20 @@
             if (exMatch) s = exMatch[1].trim();
             if (!s) return '';
             return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function safeId(name) {
+            return name.replace(/[^a-zA-Z0-9]/g, '-');
+        }
+
+        function getBipGoalNames() {
+            const seen = [];
+            (filteredDays || studentData.days).forEach(day => {
+                day.bipGoals.forEach(goal => {
+                    if (!seen.includes(goal.name)) seen.push(goal.name);
+                });
+            });
+            return seen;
         }
 
         function initializeDashboard() {
@@ -609,25 +878,196 @@
                 panel.style.display = 'block';
             }
 
-            // Build dynamic custom tracking and BIP charts
+            // Build category checkboxes
+            const firstDay = studentData.days.find(d => d.categories && Object.keys(d.categories).length > 0);
+            if (firstDay) {
+                allCategoryNames = Object.keys(firstDay.categories);
+                enabledCategories = new Set(allCategoryNames);
+                const checkboxArea = document.getElementById('categoryCheckboxes');
+                checkboxArea.innerHTML = allCategoryNames.map(cat =>
+                    `<div class="checkbox-item">
+                        <input type="checkbox" id="cat-${safeId(cat)}" checked onchange="toggleCategory('${cat}')">
+                        <label for="cat-${safeId(cat)}">${cat}</label>
+                    </div>`
+                ).join('');
+            }
+
+            // Setup date selector
+            const dateSelector = document.getElementById('dateSelector');
+            dateSelector.innerHTML = '<option value="">-- Select a date --</option>' +
+                studentData.days.map((day, idx) =>
+                    `<option value="${idx}">${day.date.toLocaleDateString()}</option>`
+                ).join('');
+
+            // Setup date range filter
+            const startDate = document.getElementById('filterStartDate');
+            const endDate = document.getElementById('filterEndDate');
+            startDate.valueAsDate = studentData.dateRange.start;
+            endDate.valueAsDate = studentData.dateRange.end;
+
+            // Build date selection for comparison
+            buildDateSelectionArea();
+
+            // Build dynamic charts
             buildDynamicCharts();
+
+            // Setup tab navigation
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.getElementById(e.target.dataset.tab).classList.add('active');
+                });
+            });
+
             refreshCharts();
         }
 
-        // Turn an arbitrary metric/goal name into a safe DOM id fragment.
-        function safeId(name) {
-            return name.replace(/[^a-zA-Z0-9]/g, '-');
+        function toggleCategory(cat) {
+            const checkbox = document.getElementById('cat-' + safeId(cat));
+            if (checkbox.checked) {
+                enabledCategories.add(cat);
+            } else {
+                enabledCategories.delete(cat);
+            }
+            refreshCharts();
         }
 
-        // Discover, in document order, which BIP goals exist across all days.
-        function getBipGoalNames() {
-            const seen = [];
-            studentData.days.forEach(day => {
-                day.bipGoals.forEach(goal => {
-                    if (!seen.includes(goal.name)) seen.push(goal.name);
+        function buildDateSelectionArea() {
+            const area = document.getElementById('dateSelectionArea');
+            area.innerHTML = '<div class="checkbox-group">' +
+                studentData.days.map((day, idx) =>
+                    `<div class="checkbox-item">
+                        <input type="checkbox" id="date-${idx}" onchange="toggleComparisonDate(${idx})">
+                        <label for="date-${idx}">${day.date.toLocaleDateString()}</label>
+                    </div>`
+                ).join('') +
+                '</div>';
+        }
+
+        function toggleComparisonDate(idx) {
+            if (document.getElementById('date-' + idx).checked) {
+                if (selectedDatesForComparison.size < 5) {
+                    selectedDatesForComparison.add(idx);
+                } else {
+                    document.getElementById('date-' + idx).checked = false;
+                    showMessage('Maximum 5 dates for comparison', 'error');
+                }
+            } else {
+                selectedDatesForComparison.delete(idx);
+            }
+        }
+
+        function generateComparisonChart() {
+            const canvas = document.getElementById('comparisonChart');
+            if (!canvas) return;
+
+            if (selectedDatesForComparison.size === 0) {
+                showMessage('Select at least one date', 'error');
+                return;
+            }
+
+            if (charts.comparisonChart) charts.comparisonChart.destroy();
+
+            const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
+            const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+            const datasets = [];
+
+            Array.from(selectedDatesForComparison).forEach((dayIdx, colorIdx) => {
+                const day = studentData.days[dayIdx];
+                const avgPerSlot = [];
+                for (let slot = 0; slot < 25; slot++) {
+                    let sum = 0;
+                    let count = 0;
+                    Object.values(day.categories || {}).forEach(catData => {
+                        if (catData && catData.slots && catData.slots[slot] !== undefined) {
+                            sum += catData.slots[slot] || 0;
+                            count++;
+                        }
+                    });
+                    avgPerSlot.push(count > 0 ? sum / count : 0);
+                }
+
+                datasets.push({
+                    label: day.date.toLocaleDateString(),
+                    data: avgPerSlot,
+                    borderColor: colors[colorIdx % colors.length],
+                    backgroundColor: colors[colorIdx % colors.length] + '20',
+                    tension: 0.4,
+                    fill: false,
+                    borderWidth: 2
                 });
             });
-            return seen;
+
+            charts.comparisonChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: { labels: slotLabels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function applyDateFilter() {
+            const startVal = document.getElementById('filterStartDate').valueAsDate;
+            const endVal = document.getElementById('filterEndDate').valueAsDate;
+
+            if (!startVal || !endVal) return;
+
+            filteredDays = studentData.days.filter(day => {
+                const d = day.date.getTime();
+                return d >= startVal.getTime() && d <= endVal.getTime();
+            });
+
+            document.getElementById('dayCount').textContent = filteredDays.length;
+            refreshCharts();
+        }
+
+        function resetDateFilter() {
+            filteredDays = [...studentData.days];
+            document.getElementById('filterStartDate').valueAsDate = studentData.dateRange.start;
+            document.getElementById('filterEndDate').valueAsDate = studentData.dateRange.end;
+            document.getElementById('dayCount').textContent = studentData.days.length;
+            refreshCharts();
+        }
+
+        function selectDateToAdjust() {
+            const selector = document.getElementById('dateSelector');
+            const panel = document.getElementById('dateAdjustmentPanel');
+            const idx = parseInt(selector.value);
+
+            if (isNaN(idx)) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            const day = studentData.days[idx];
+            document.getElementById('selectedDateInfo').textContent = `Current date: ${day.date.toLocaleDateString()}`;
+            document.getElementById('adjustedDate').valueAsDate = day.date;
+            panel.style.display = 'block';
+        }
+
+        function applyDateAdjustment() {
+            const selector = document.getElementById('dateSelector');
+            const idx = parseInt(selector.value);
+            const newDate = document.getElementById('adjustedDate').valueAsDate;
+
+            if (!newDate) {
+                showMessage('Please select a new date', 'error');
+                return;
+            }
+
+            const oldDate = studentData.days[idx].date.toLocaleDateString();
+            studentData.days[idx].date = newDate;
+            filteredDays = [...studentData.days];
+
+            showMessage(`Date adjusted from ${oldDate} to ${newDate.toLocaleDateString()}`, 'success');
+            refreshCharts();
+            selectDateToAdjust();
         }
 
         function buildDynamicCharts() {
@@ -645,7 +1085,10 @@
                 trackingMeta.forEach(meta => {
                     html += `
                         <div class="chart-container">
-                            <h3 class="chart-title">📊 ${meta.label}</h3>
+                            <div class="chart-header">
+                                <h3 class="chart-title">📊 ${meta.label}</h3>
+                                <button class="chart-print-btn" onclick="printChart('tracking-slot-${meta.slot}')">Print</button>
+                            </div>
                             <canvas id="tracking-slot-${meta.slot}"></canvas>
                         </div>
                     `;
@@ -654,12 +1097,15 @@
             }
 
             if (bipGoalNames.length > 0) {
-                html += '<h2 style="color:white;margin:10px 0;">🎯 BIP Goals (detail)</h2>';
+                html += '<h2 style="color:white;margin:10px 0;">🎯 BIP Goals (Detail)</h2>';
                 html += '<div class="charts-grid">';
                 bipGoalNames.forEach(name => {
                     html += `
                         <div class="chart-container">
-                            <h3 class="chart-title">🎯 ${name}</h3>
+                            <div class="chart-header">
+                                <h3 class="chart-title">🎯 ${name}</h3>
+                                <button class="chart-print-btn" onclick="printChart('bip-${safeId(name)}')">Print</button>
+                            </div>
                             <canvas id="bip-${safeId(name)}"></canvas>
                         </div>
                     `;
@@ -671,8 +1117,7 @@
         }
 
         function refreshCharts() {
-            // Update all charts based on selected metric
-            const metric = document.querySelector('input[name="metric"]:checked').value;
+            const metric = document.querySelector('input[name="metric"]:checked')?.value || 'percentage';
             updateCategoryTrendChart(metric);
             updateCategoryPerformanceChart(metric);
             updateTimeOfDayChart(metric);
@@ -681,16 +1126,204 @@
             updateIndividualBipCharts();
         }
 
-        // One line chart per custom tracking metric (value over time).
-        // Tracking metrics are keyed by slot position (0/1/2).
+        function updateCategoryTrendChart(metric) {
+            const canvas = document.getElementById('categoryTrend');
+            if (!canvas) return;
+            if (charts.categoryTrend) charts.categoryTrend.destroy();
+
+            const days = filteredDays || studentData.days;
+            const firstDay = days.find(d => d.categories && Object.keys(d.categories).length > 0);
+
+            if (!firstDay) {
+                canvas.getContext('2d').fillText('No category data available', 50, 50);
+                return;
+            }
+
+            const categories = Array.from(enabledCategories);
+            const datasets = categories.map((cat, idx) => {
+                const data = days.map(day => {
+                    if (day.categories && day.categories[cat]) {
+                        return metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
+                    }
+                    return 0;
+                });
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+                return {
+                    label: cat,
+                    data,
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length] + '20',
+                    tension: 0.4,
+                    fill: false,
+                    borderWidth: 2
+                };
+            });
+
+            charts.categoryTrend = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: days.map(d => d.date.toLocaleDateString()),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                }
+            });
+        }
+
+        function updateCategoryPerformanceChart(metric) {
+            const canvas = document.getElementById('categoryPerformance');
+            if (!canvas) return;
+            if (charts.categoryPerformance) charts.categoryPerformance.destroy();
+
+            const days = filteredDays || studentData.days;
+            const firstDay = days.find(d => d.categories && Object.keys(d.categories).length > 0);
+
+            if (!firstDay) {
+                canvas.getContext('2d').fillText('No category data available', 50, 50);
+                return;
+            }
+
+            const categories = Array.from(enabledCategories);
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+            const avgData = categories.map(cat => {
+                let sum = 0;
+                let count = 0;
+                days.forEach(day => {
+                    if (day.categories && day.categories[cat]) {
+                        sum += metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
+                        count++;
+                    }
+                });
+                return count > 0 ? sum / count : 0;
+            });
+
+            charts.categoryPerformance = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: metric === 'percentage' ? 'Average %' : 'Average Points',
+                        data: avgData,
+                        backgroundColor: colors.slice(0, categories.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                }
+            });
+        }
+
+        function updateTimeOfDayChart(metric) {
+            const canvas = document.getElementById('timeOfDay');
+            if (!canvas) return;
+            if (charts.timeOfDay) charts.timeOfDay.destroy();
+
+            const days = filteredDays || studentData.days;
+            const timeSlots = 25;
+            const avgPerSlot = [];
+            for (let slot = 0; slot < timeSlots; slot++) {
+                let sum = 0;
+                let count = 0;
+                days.forEach(day => {
+                    if (day.categories) {
+                        Object.entries(day.categories).forEach(([catName, catData]) => {
+                            if (enabledCategories.has(catName) && catData && catData.slots && catData.slots[slot] !== undefined) {
+                                sum += catData.slots[slot] || 0;
+                                count++;
+                            }
+                        });
+                    }
+                });
+                avgPerSlot.push(count > 0 ? sum / count : 0);
+            }
+
+            const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
+
+            charts.timeOfDay = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: slotLabels,
+                    datasets: [{
+                        label: 'Avg Behavior',
+                        data: avgPerSlot,
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateBipGoalsChart() {
+            const canvas = document.getElementById('bipGoals');
+            if (!canvas) return;
+            if (charts.bipGoals) charts.bipGoals.destroy();
+
+            const days = filteredDays || studentData.days;
+            const bipNames = new Set();
+            days.forEach(day => {
+                day.bipGoals.forEach(goal => bipNames.add(goal.name));
+            });
+
+            if (bipNames.size === 0) return;
+
+            const metric = document.querySelector('input[name="metric-bip"]:checked')?.value || 'frequency';
+            const datasets = Array.from(bipNames).map((goalName, idx) => {
+                const data = days.map(day => {
+                    const goal = day.bipGoals.find(g => g.name === goalName);
+                    if (!goal) return 0;
+                    switch (metric) {
+                        case 'frequency': return goal.frequency;
+                        case 'duration': return goal.duration;
+                        case 'intensity': return goal.intensity;
+                        default: return goal.frequency;
+                    }
+                });
+                const colors = ['#ef4444', '#f59e0b', '#10b981'];
+                return {
+                    label: goalName,
+                    data,
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length] + '20',
+                    tension: 0.4,
+                    fill: false,
+                    borderWidth: 2
+                };
+            });
+
+            charts.bipGoals = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: days.map(d => d.date.toLocaleDateString()),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
         function updateTrackingCharts() {
-            const labels = studentData.days.map(d => d.date.toLocaleDateString());
+            const days = filteredDays || studentData.days;
+            const labels = days.map(d => d.date.toLocaleDateString());
             (studentData.trackingMeta || []).forEach(meta => {
                 const canvas = document.getElementById('tracking-slot-' + meta.slot);
                 if (!canvas) return;
                 const key = 'tracking-slot-' + meta.slot;
                 if (charts[key]) charts[key].destroy();
-                const data = studentData.days.map(day => {
+                const data = days.map(day => {
                     const t = day.tracking && day.tracking[meta.slot];
                     return t ? (t.value || 0) : 0;
                 });
@@ -718,9 +1351,9 @@
             });
         }
 
-        // One chart per BIP goal showing Frequency / Duration / Intensity over time.
         function updateIndividualBipCharts() {
-            const labels = studentData.days.map(d => d.date.toLocaleDateString());
+            const days = filteredDays || studentData.days;
+            const labels = days.map(d => d.date.toLocaleDateString());
             getBipGoalNames().forEach(name => {
                 const canvas = document.getElementById('bip-' + safeId(name));
                 if (!canvas) return;
@@ -728,7 +1361,7 @@
                 if (charts[key]) charts[key].destroy();
 
                 const freq = [], dur = [], inten = [];
-                studentData.days.forEach(day => {
+                days.forEach(day => {
                     const goal = day.bipGoals.find(g => g.name === name);
                     freq.push(goal ? goal.frequency : 0);
                     dur.push(goal ? goal.duration : 0);
@@ -740,9 +1373,9 @@
                     data: {
                         labels,
                         datasets: [
-                            { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false },
-                            { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false },
-                            { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false }
+                            { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false, borderWidth: 2 },
+                            { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false, borderWidth: 2 },
+                            { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false, borderWidth: 2 }
                         ]
                     },
                     options: {
@@ -755,197 +1388,64 @@
             });
         }
 
-        function updateCategoryTrendChart(metric) {
-            const ctx = document.getElementById('categoryTrend').getContext('2d');
-            if (charts.categoryTrend) charts.categoryTrend.destroy();
+        function printChart(chartId) {
+            const canvas = document.getElementById(chartId);
+            if (!canvas) return;
 
-            // Find first day with categories
-            let firstDay = null;
-            for (const day of studentData.days) {
-                if (day.categories && Object.keys(day.categories).length > 0) {
-                    firstDay = day;
-                    break;
-                }
-            }
-
-            if (!firstDay) {
-                ctx.fillText('No category data available', 50, 50);
-                return;
-            }
-
-            const categories = Object.keys(firstDay.categories);
-            const datasets = categories.map((cat, idx) => {
-                const data = studentData.days.map(day => {
-                    if (day.categories && day.categories[cat]) {
-                        return metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
-                    }
-                    return 0;
-                });
-                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-                return {
-                    label: cat,
-                    data,
-                    borderColor: colors[idx % colors.length],
-                    backgroundColor: colors[idx % colors.length] + '20',
-                    tension: 0.4,
-                    fill: false,
-                    borderWidth: 2
-                };
-            });
-
-            charts.categoryTrend = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: studentData.days.map(d => d.date.toLocaleDateString()),
-                    datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
-                }
-            });
+            const printWindow = window.open('', '', 'width=800,height=600');
+            const img = canvas.toDataURL('image/png');
+            printWindow.document.write(`<img src="${img}" style="width:100%; max-width:800px;"></body>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => printWindow.print(), 100);
         }
 
-        function updateCategoryPerformanceChart(metric) {
-            const ctx = document.getElementById('categoryPerformance').getContext('2d');
-            if (charts.categoryPerformance) charts.categoryPerformance.destroy();
+        function printFullSummary() {
+            const printWindow = window.open('', '', 'width=900,height=600');
+            let html = `<html><head><title>Behavior School Data - Full Summary</title><style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #333; margin-bottom: 10px; }
+                h2 { color: #666; margin-top: 20px; }
+                p { line-height: 1.6; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f0f0f0; }
+                canvas { max-width: 100%; page-break-inside: avoid; margin: 15px 0; }
+            </style></head><body>`;
 
-            // Find first day with categories
-            let firstDay = null;
-            for (const day of studentData.days) {
-                if (day.categories && Object.keys(day.categories).length > 0) {
-                    firstDay = day;
-                    break;
-                }
+            html += `<h1>${studentData.name}</h1>
+            <p><strong>Location:</strong> ${studentData.location}</p>
+            <p><strong>Total Days:</strong> ${(filteredDays || studentData.days).length}</p>
+            <p><strong>Date Range:</strong> ${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}</p>`;
+
+            if (studentData.dataQualityIssues.length > 0) {
+                html += '<h2>Data Quality Issues</h2><ul>';
+                studentData.dataQualityIssues.forEach(issue => {
+                    html += `<li>${issue}</li>`;
+                });
+                html += '</ul>';
             }
 
-            if (!firstDay) {
-                ctx.fillText('No category data available', 50, 50);
-                return;
-            }
-
-            const categories = Object.keys(firstDay.categories);
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-            const avgData = categories.map(cat => {
-                let sum = 0;
-                let count = 0;
-                studentData.days.forEach(day => {
-                    if (day.categories && day.categories[cat]) {
-                        sum += metric === 'percentage' ? day.categories[cat].percentage : day.categories[cat].total;
-                        count++;
-                    }
-                });
-                return count > 0 ? sum / count : 0;
-            });
-
-            charts.categoryPerformance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: categories,
-                    datasets: [{
-                        label: metric === 'percentage' ? 'Average %' : 'Average Points',
-                        data: avgData,
-                        backgroundColor: colors.slice(0, categories.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+            html += '<h2>Charts</h2>';
+            ['categoryTrend', 'categoryPerformance', 'timeOfDay', 'bipGoals'].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    html += `<h3>${canvas.previousElementSibling?.querySelector('.chart-title')?.textContent || id}</h3>`;
+                    html += `<img src="${canvas.toDataURL('image/png')}" style="max-width: 100%; page-break-inside: avoid;">`;
                 }
             });
-        }
 
-        function updateTimeOfDayChart(metric) {
-            const ctx = document.getElementById('timeOfDay').getContext('2d');
-            if (charts.timeOfDay) charts.timeOfDay.destroy();
-
-            const timeSlots = 25;
-            const avgPerSlot = [];
-            for (let slot = 0; slot < timeSlots; slot++) {
-                let sum = 0;
-                let count = 0;
-                studentData.days.forEach(day => {
-                    if (day.categories) {
-                        Object.values(day.categories).forEach(catData => {
-                            if (catData && catData.slots && catData.slots[slot] !== undefined) {
-                                sum += catData.slots[slot] || 0;
-                                count++;
-                            }
-                        });
-                    }
-                });
-                avgPerSlot.push(count > 0 ? sum / count : 0);
-            }
-
-            const slotLabels = ['Arr', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dis'];
-
-            charts.timeOfDay = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: slotLabels,
-                    datasets: [{
-                        label: 'Avg Behavior',
-                        data: avgPerSlot,
-                        backgroundColor: '#3b82f6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        function updateBipGoalsChart() {
-            const ctx = document.getElementById('bipGoals').getContext('2d');
-            if (charts.bipGoals) charts.bipGoals.destroy();
-
-            const bipNames = new Set();
-            studentData.days.forEach(day => {
-                day.bipGoals.forEach(goal => bipNames.add(goal.name));
-            });
-
-            if (bipNames.size === 0) return;
-
-            const datasets = Array.from(bipNames).map((goalName, idx) => {
-                const data = studentData.days.map(day => {
-                    const goal = day.bipGoals.find(g => g.name === goalName);
-                    return goal ? goal.frequency : 0;
-                });
-                const colors = ['#ef4444', '#f59e0b', '#10b981'];
-                return {
-                    label: goalName,
-                    data,
-                    borderColor: colors[idx % colors.length],
-                    backgroundColor: colors[idx % colors.length] + '20',
-                    tension: 0.4,
-                    fill: false
-                };
-            });
-
-            charts.bipGoals = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: studentData.days.map(d => d.date.toLocaleDateString()),
-                    datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
+            html += '</body></html>';
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => printWindow.print(), 1000);
         }
 
         function showMessage(message, type) {
             const div = document.createElement('div');
-            div.className = type === 'error' ? 'error' : type === 'success' ? 'error' : 'loading';
-            if (type === 'success') div.style.background = '#10b981';
+            div.className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'error';
+            if (type === 'loading') div.style.background = '#3b82f6';
             div.textContent = message;
             document.getElementById('messageArea').innerHTML = '';
             document.getElementById('messageArea').appendChild(div);
@@ -956,6 +1456,7 @@
 
         function clearData() {
             studentData = null;
+            filteredDays = null;
             document.getElementById('fileInput').value = '';
             document.getElementById('uploadSection').style.display = 'block';
             document.getElementById('dashboard').classList.remove('active');
