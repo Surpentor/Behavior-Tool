@@ -1890,6 +1890,15 @@
             } : baseOptions;
 
             if (mode === 'overlay' || mode === 'combined') {
+                // Special case: hourly with no metrics selected
+                if (type === 'hourly' && selectedComparisonMetrics.size === 0) {
+                    container.innerHTML = `<div class="empty-message" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                        <p style="margin-bottom: 8px; font-size: 0.95rem;">No metrics selected</p>
+                        <p style="font-size: 0.85rem;">Choose at least one metric from the list above to display the comparison chart.</p>
+                    </div>`;
+                    return;
+                }
+
                 const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
                 const groupingLabel = grouping === 'by-category' ? ' (by category)' : grouping === 'by-date' ? ' (by date)' : '';
                 container.innerHTML = `
@@ -1981,6 +1990,15 @@
                     { type: chartType, data: { labels: chartAxisLabels, datasets }, options: overlayOptions }
                 );
             } else {
+                // Special case: hourly with no metrics selected
+                if (type === 'hourly' && selectedComparisonMetrics.size === 0) {
+                    container.innerHTML = `<div class="empty-message" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                        <p style="margin-bottom: 8px; font-size: 0.95rem;">No metrics selected</p>
+                        <p style="font-size: 0.85rem;">Choose at least one metric from the list above to display the comparison chart.</p>
+                    </div>`;
+                    return;
+                }
+
                 let html = '<div class="charts-grid">';
                 days.forEach((day, i) => {
                     html += `
