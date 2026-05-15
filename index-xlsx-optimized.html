@@ -727,41 +727,76 @@
                 <div id="comparisons" class="tab-content">
                     <div class="controls-panel">
                         <div class="date-comparison-note">
-                            💡 Pick up to 5 dates, choose which chart to compare, and view them overlaid on one chart or side-by-side as separate charts.
+                            Compare student behavior across multiple dates. Choose what to compare, configure options, then select dates.
                         </div>
 
+                        <!-- Step 1: Choose comparison type -->
                         <div class="control-group">
-                            <label><strong>1. Select dates to compare (up to 5):</strong></label>
-                            <div id="dateSelectionArea"></div>
-                        </div>
-
-                        <div class="control-group" style="margin-top: 15px;">
-                            <label><strong>2. Choose chart to compare:</strong></label>
-                            <select id="comparisonChartType" onchange="updateComparisonMetrics(); renderComparison()">
-                                <option value="hourly">⏰ Hourly Pattern (avg behavior per time slot)</option>
-                                <option value="categories">📈 Category Breakdown (% per category)</option>
-                                <option value="bipgoals">🎯 BIP Goals (frequency / duration / intensity)</option>
-                                <option value="tracking">📊 Custom Tracking (value per metric)</option>
+                            <label><strong>1. What to compare:</strong></label>
+                            <select id="comparisonChartType" onchange="updateComparisonConfig()">
+                                <option value="hourly">Hourly Pattern — Behavior across time slots</option>
+                                <option value="categories">Category Breakdown — Performance by category</option>
+                                <option value="bipgoals">BIP Goals — Goal metrics over time</option>
+                                <option value="tracking">Custom Tracking — Tracked metrics over time</option>
                             </select>
                         </div>
 
-                        <div class="control-group" id="comparisonMetricsGroup" style="margin-top: 15px; display: none;">
-                            <label><strong>Select metrics to display (mix & match):</strong></label>
-                            <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;"></div>
+                        <!-- Step 2: Configure based on type -->
+                        <!-- Hourly configuration -->
+                        <div class="control-group" id="comparisonConfigHourly" style="margin-top: 15px; display: none;">
+                            <label><strong>2. Select metrics to display:</strong></label>
+                            <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px;"></div>
                         </div>
 
-                        <div class="control-group" style="margin-top: 15px;">
-                            <label><strong>3. View mode:</strong></label>
-                            <div class="comparison-mode-toggle">
-                                <label>
-                                    <input type="radio" name="comparisonMode" value="overlay" checked onchange="renderComparison()">
-                                    <span>▭ Overlay — all dates on one chart</span>
+                        <!-- Categories/Tracking configuration -->
+                        <div class="control-group" id="comparisonConfigGrouping" style="margin-top: 15px; display: none;">
+                            <label><strong>2. How to group:</strong></label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonGrouping" value="by-date" checked onchange="renderComparison()">
+                                    <span>By Date — Compare categories across dates</span>
                                 </label>
-                                <label>
-                                    <input type="radio" name="comparisonMode" value="separate" onchange="renderComparison()">
-                                    <span>▦ Separate — one chart per date</span>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonGrouping" value="by-category" onchange="renderComparison()">
+                                    <span>By Category — Compare dates within each category</span>
                                 </label>
                             </div>
+                        </div>
+
+                        <!-- BIP Goals configuration -->
+                        <div class="control-group" id="comparisonConfigBIP" style="margin-top: 15px; display: none;">
+                            <label><strong>2. View mode:</strong></label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMode" value="overlay" checked onchange="renderComparison()">
+                                    <span>Overlay — All dates on one chart</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMode" value="separate" onchange="renderComparison()">
+                                    <span>Separate — One chart per date</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- View mode for Hourly/Categories/Tracking -->
+                        <div class="control-group" id="comparisonConfigViewMode" style="margin-top: 15px; display: none;">
+                            <label><strong>3. View mode:</strong></label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMode" value="overlay" checked onchange="renderComparison()">
+                                    <span>Combined Chart — All dates together</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMode" value="separate" onchange="renderComparison()">
+                                    <span>Separate Charts — One per date</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Select dates -->
+                        <div class="control-group" style="margin-top: 15px;">
+                            <label><strong>3. Select dates to compare (up to 5):</strong></label>
+                            <div id="dateSelectionArea"></div>
                         </div>
 
                         <button class="btn btn-secondary" onclick="renderComparison()" style="margin-top: 15px;">Generate Comparison</button>
@@ -1356,58 +1391,79 @@
 
         let selectedComparisonMetrics = new Set();
 
-        function updateComparisonMetrics() {
+        function updateComparisonConfig() {
             const type = document.getElementById('comparisonChartType').value;
-            const group = document.getElementById('comparisonMetricsGroup');
-            const checkboxes = document.getElementById('comparisonMetricsCheckboxes');
 
-            if (!group || !checkboxes) return;
+            // Hide all config panels
+            document.getElementById('comparisonConfigHourly').style.display = 'none';
+            document.getElementById('comparisonConfigGrouping').style.display = 'none';
+            document.getElementById('comparisonConfigBIP').style.display = 'none';
+            document.getElementById('comparisonConfigViewMode').style.display = 'none';
 
-            if (type !== 'hourly') {
-                group.style.display = 'none';
-                selectedComparisonMetrics.clear();
-                return;
+            selectedComparisonMetrics.clear();
+            document.querySelectorAll('input[name="comparisonMode"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="comparisonGrouping"]').forEach(r => r.checked = false);
+
+            if (type === 'hourly') {
+                document.getElementById('comparisonConfigHourly').style.display = 'block';
+                document.getElementById('comparisonConfigViewMode').style.display = 'block';
+                document.querySelector('input[name="comparisonMode"][value="overlay"]').checked = true;
+                populateHourlyMetrics();
+            } else if (type === 'categories' || type === 'tracking') {
+                document.getElementById('comparisonConfigGrouping').style.display = 'block';
+                document.getElementById('comparisonConfigViewMode').style.display = 'block';
+                document.querySelector('input[name="comparisonGrouping"][value="by-date"]').checked = true;
+                document.querySelector('input[name="comparisonMode"][value="overlay"]').checked = true;
+            } else if (type === 'bipgoals') {
+                document.getElementById('comparisonConfigBIP').style.display = 'block';
+                document.querySelector('input[name="comparisonMode"][value="overlay"]').checked = true;
             }
 
-            group.style.display = 'block';
+            renderComparison();
+        }
+
+        function populateHourlyMetrics() {
+            const checkboxes = document.getElementById('comparisonMetricsCheckboxes');
+            if (!checkboxes) return;
+
             checkboxes.innerHTML = '';
             selectedComparisonMetrics.clear();
 
             // Add category checkboxes
-            if (!allCategoryNames) return;
-            allCategoryNames.forEach(cat => {
-                const id = 'cmp-metric-cat-' + cat;
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = id;
-                checkbox.value = 'cat:' + cat;
-                checkbox.checked = true;
-                checkbox.onchange = () => {
-                    if (checkbox.checked) {
-                        selectedComparisonMetrics.add(checkbox.value);
-                    } else {
-                        selectedComparisonMetrics.delete(checkbox.value);
-                    }
-                    renderComparison();
-                };
-                selectedComparisonMetrics.add(checkbox.value);
+            if (allCategoryNames) {
+                allCategoryNames.forEach(cat => {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = 'cmp-metric-cat-' + cat;
+                    checkbox.value = 'cat:' + cat;
+                    checkbox.checked = true;
+                    checkbox.onchange = () => {
+                        if (checkbox.checked) {
+                            selectedComparisonMetrics.add(checkbox.value);
+                        } else {
+                            selectedComparisonMetrics.delete(checkbox.value);
+                        }
+                        renderComparison();
+                    };
+                    selectedComparisonMetrics.add(checkbox.value);
 
-                const label = document.createElement('label');
-                label.style.display = 'flex';
-                label.style.alignItems = 'center';
-                label.style.gap = '6px';
-                label.style.cursor = 'pointer';
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(cat));
-                checkboxes.appendChild(label);
-            });
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.gap = '6px';
+                    label.style.cursor = 'pointer';
+                    label.style.fontSize = '0.9rem';
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(cat));
+                    checkboxes.appendChild(label);
+                });
+            }
 
             // Add tracking checkboxes
             (studentData.trackingMeta || []).forEach(meta => {
-                const id = 'cmp-metric-trk-' + meta.slot;
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
-                checkbox.id = id;
+                checkbox.id = 'cmp-metric-trk-' + meta.slot;
                 checkbox.value = 'trk:' + meta.slot;
                 checkbox.onchange = () => {
                     if (checkbox.checked) {
@@ -1423,19 +1479,19 @@
                 label.style.alignItems = 'center';
                 label.style.gap = '6px';
                 label.style.cursor = 'pointer';
+                label.style.fontSize = '0.9rem';
                 label.appendChild(checkbox);
-                label.appendChild(document.createTextNode('📊 ' + meta.label));
+                label.appendChild(document.createTextNode(meta.label));
                 checkboxes.appendChild(label);
             });
 
-            // Add BIP goal checkboxes with metric selection
+            // Add BIP goal checkboxes
             allBipGoalNames().forEach(name => {
-                ['freq', 'dur', 'inten'].forEach((metric, idx) => {
+                ['freq', 'dur', 'inten'].forEach((metric) => {
                     const metricLabel = metric === 'freq' ? 'Frequency' : metric === 'dur' ? 'Duration' : 'Intensity';
-                    const id = 'cmp-metric-bip-' + name + '-' + metric;
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.id = id;
+                    checkbox.id = 'cmp-metric-bip-' + name + '-' + metric;
                     checkbox.value = 'bip:' + name + ':' + metric;
                     checkbox.onchange = () => {
                         if (checkbox.checked) {
@@ -1443,6 +1499,7 @@
                         } else {
                             selectedComparisonMetrics.delete(checkbox.value);
                         }
+                        renderComparison();
                     };
 
                     const label = document.createElement('label');
@@ -1450,8 +1507,9 @@
                     label.style.alignItems = 'center';
                     label.style.gap = '6px';
                     label.style.cursor = 'pointer';
+                    label.style.fontSize = '0.9rem';
                     label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode('🎯 ' + name + ' (' + metricLabel + ')'));
+                    label.appendChild(document.createTextNode(name + ' — ' + metricLabel));
                     checkboxes.appendChild(label);
                 });
             });
