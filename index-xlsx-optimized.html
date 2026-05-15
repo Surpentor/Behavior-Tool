@@ -1369,7 +1369,7 @@
                     document.getElementById(e.target.dataset.tab).classList.add('active');
                     // Initialize metrics when comparisons tab is opened
                     if (e.target.dataset.tab === 'comparisons') {
-                        updateComparisonMetrics();
+                        updateComparisonConfig();
                     }
                 });
             });
@@ -1401,7 +1401,7 @@
                 ).join('') +
                 '</div>';
             // Initialize metrics panel with current chart type
-            updateComparisonMetrics();
+            updateComparisonConfig();
         }
 
         let selectedComparisonMetrics = new Set();
