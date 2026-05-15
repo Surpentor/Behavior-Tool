@@ -504,12 +504,14 @@
             vertical-align: bottom;
             z-index: 10;
         }
-        .summary-table th.group-head {
-            text-align: center;
-            background: #eef2ff;
+        .summary-table thead tr:first-child th {
             position: sticky;
             top: 0;
             z-index: 11;
+        }
+        .summary-table th.group-head {
+            text-align: center;
+            background: #eef2ff;
         }
         .summary-table td.date-col, .summary-table th.date-col {
             text-align: left;
