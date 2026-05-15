@@ -817,6 +817,18 @@
                             <div id="dateSelectionArea"></div>
                         </div>
 
+                        <!-- Chart Display Type -->
+                        <div class="control-group" style="margin-top: 15px;">
+                            <label for="chartDisplayType"><strong>4. Chart display type:</strong></label>
+                            <select id="chartDisplayType" onchange="renderComparison()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                <option value="line">Line Chart</option>
+                                <option value="bar">Bar Chart</option>
+                                <option value="stacked">Stacked Bar Chart</option>
+                                <option value="area">Area Chart</option>
+                                <option value="step">Step Chart</option>
+                            </select>
+                        </div>
+
                         <button class="btn btn-secondary" onclick="renderComparison()" style="margin-top: 15px;">Generate Comparison</button>
                     </div>
 
@@ -1871,7 +1883,21 @@
             const type = document.getElementById('comparisonChartType').value;
             const mode = document.querySelector('input[name="comparisonMode"]:checked').value;
             const grouping = document.querySelector('input[name="comparisonGrouping"]:checked')?.value;
-            const chartType = type === 'hourly' ? 'line' : 'bar';
+            const displayType = document.getElementById('chartDisplayType')?.value || 'line';
+
+            // Determine actual chart type based on display type selection
+            let chartType;
+            if (displayType === 'bar') {
+                chartType = 'bar';
+            } else if (displayType === 'stacked') {
+                chartType = 'bar';
+            } else if (displayType === 'area') {
+                chartType = 'line';
+            } else if (displayType === 'step') {
+                chartType = 'line';
+            } else {
+                chartType = type === 'hourly' ? 'line' : 'bar';
+            }
             const indices = Array.from(selectedDatesForComparison).sort((a, b) => a - b);
             const days = indices.map(i => studentData.days[i]);
             const titleMap = {
@@ -2109,6 +2135,23 @@
                 }
                 const chartOptions = JSON.parse(JSON.stringify(overlayOptions));
                 chartOptions.scales.y.max = getYAxisMax(datasets);
+
+                // Apply display type specific options
+                if (displayType === 'stacked') {
+                    chartOptions.scales.x = chartOptions.scales.x || {};
+                    chartOptions.scales.x.stacked = true;
+                    chartOptions.scales.y.stacked = true;
+                } else if (displayType === 'area') {
+                    datasets.forEach(ds => {
+                        ds.fill = true;
+                        ds.backgroundColor = ds.borderColor ? ds.borderColor + '20' : '#ffffff20';
+                    });
+                } else if (displayType === 'step') {
+                    datasets.forEach(ds => {
+                        ds.stepped = true;
+                    });
+                }
+
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
                     { type: chartType, data: { labels: chartAxisLabels, datasets }, options: chartOptions }
@@ -2163,6 +2206,23 @@
 
                     const chartOptions = JSON.parse(JSON.stringify(baseOptions));
                     chartOptions.scales.y.max = getYAxisMax(datasets);
+
+                    // Apply display type specific options
+                    if (displayType === 'stacked') {
+                        chartOptions.scales.x = chartOptions.scales.x || {};
+                        chartOptions.scales.x.stacked = true;
+                        chartOptions.scales.y.stacked = true;
+                    } else if (displayType === 'area') {
+                        datasets.forEach(ds => {
+                            ds.fill = true;
+                            ds.backgroundColor = ds.borderColor ? ds.borderColor + '20' : '#ffffff20';
+                        });
+                    } else if (displayType === 'step') {
+                        datasets.forEach(ds => {
+                            ds.stepped = true;
+                        });
+                    }
+
                     charts['cmp-sep-' + i] = new Chart(
                         document.getElementById('cmp-sep-' + i + '-canvas').getContext('2d'),
                         {
