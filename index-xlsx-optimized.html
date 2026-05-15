@@ -1948,16 +1948,33 @@
                 let chartAxisLabels = axisLabels;
                 if (useSelectiveMetrics) {
                     datasets = [];
+                    // Create a color map for each unique metric (independent of date)
+                    const metricColors = {};
+                    const metricColorList = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#d946ef', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7'];
+                    let colorIdx = 0;
+
+                    days.forEach((day) => {
+                        const metricDatasets = comparisonSeriesHourly(day);
+                        metricDatasets.forEach((ds) => {
+                            // Assign each unique metric label a consistent color
+                            if (!metricColors[ds.label]) {
+                                metricColors[ds.label] = metricColorList[colorIdx % metricColorList.length];
+                                colorIdx++;
+                            }
+                        });
+                    });
+
+                    // Now build datasets using the metric-based colors
                     days.forEach((day, dayIdx) => {
                         const metricDatasets = comparisonSeriesHourly(day);
                         metricDatasets.forEach((ds, metricIdx) => {
-                            const c = COMPARISON_COLORS[dayIdx % COMPARISON_COLORS.length];
+                            const c = metricColors[ds.label];
                             datasets.push({
                                 label: day.date.toLocaleDateString() + ' - ' + ds.label,
                                 data: ds.data,
                                 borderColor: c,
                                 backgroundColor: chartType === 'line' ? c + '20' : c,
-                                borderDash: metricIdx > 0 ? [5, 5] : [],
+                                borderDash: dayIdx > 0 ? [5, 5] : [],
                                 tension: 0.4,
                                 fill: false,
                                 borderWidth: 2
@@ -1978,10 +1995,17 @@
                     datasets = comparison.datasets;
                 } else if (type === 'bipgoals') {
                     datasets = [];
-                    days.forEach((day, i) => {
-                        const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
-                        const bipNames = allBipGoalNames();
+                    // Create a color map for each BIP goal
+                    const bipColorList = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#d946ef'];
+                    const bipColors = {};
+                    const bipNames = allBipGoalNames();
+                    bipNames.forEach((name, idx) => {
+                        bipColors[name] = bipColorList[idx % bipColorList.length];
+                    });
+
+                    days.forEach((day, dayIdx) => {
                         bipNames.forEach(name => {
+                            const c = bipColors[name];
                             const g = day.bipGoals.find(x => x.name === name);
                             datasets.push({
                                 label: day.date.toLocaleDateString() + ' - ' + name,
@@ -1992,6 +2016,7 @@
                                 ],
                                 borderColor: c,
                                 backgroundColor: c + '20',
+                                borderDash: dayIdx > 0 ? [5, 5] : [],
                                 tension: 0.4,
                                 fill: false,
                                 borderWidth: 2
