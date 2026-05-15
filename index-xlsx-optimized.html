@@ -1584,6 +1584,7 @@
                 checkbox.type = 'checkbox';
                 checkbox.id = 'cmp-metric-trk-' + meta.slot;
                 checkbox.value = 'trk:' + meta.slot;
+                checkbox.checked = false;
                 checkbox.onchange = () => {
                     if (checkbox.checked) {
                         selectedComparisonMetrics.add(checkbox.value);
@@ -1592,7 +1593,6 @@
                     }
                     renderComparison();
                 };
-                selectedComparisonMetrics.add('trk:' + meta.slot);
 
                 const label = document.createElement('label');
                 label.style.display = 'flex';
@@ -1615,6 +1615,7 @@
                     checkbox.type = 'checkbox';
                     checkbox.id = 'cmp-metric-bip-' + name + '-' + metric;
                     checkbox.value = 'bip:' + name + ':' + metric;
+                    checkbox.checked = false;
                     checkbox.onchange = () => {
                         if (checkbox.checked) {
                             selectedComparisonMetrics.add(checkbox.value);
@@ -1623,7 +1624,6 @@
                         }
                         renderComparison();
                     };
-                    selectedComparisonMetrics.add('bip:' + name + ':' + metric);
 
                     const label = document.createElement('label');
                     label.style.display = 'flex';
