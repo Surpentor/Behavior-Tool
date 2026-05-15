@@ -1310,6 +1310,10 @@
                     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                     e.target.classList.add('active');
                     document.getElementById(e.target.dataset.tab).classList.add('active');
+                    // Initialize metrics when comparisons tab is opened
+                    if (e.target.dataset.tab === 'comparisons') {
+                        updateComparisonMetrics();
+                    }
                 });
             });
 
@@ -1339,6 +1343,8 @@
                     </div>`
                 ).join('') +
                 '</div>';
+            // Initialize metrics panel with current chart type
+            updateComparisonMetrics();
         }
 
         let selectedComparisonMetrics = new Set();
@@ -1347,6 +1353,8 @@
             const type = document.getElementById('comparisonChartType').value;
             const group = document.getElementById('comparisonMetricsGroup');
             const checkboxes = document.getElementById('comparisonMetricsCheckboxes');
+
+            if (!group || !checkboxes) return;
 
             if (type !== 'hourly') {
                 group.style.display = 'none';
@@ -1359,6 +1367,7 @@
             selectedComparisonMetrics.clear();
 
             // Add category checkboxes
+            if (!allCategoryNames) return;
             allCategoryNames.forEach(cat => {
                 const id = 'cmp-metric-cat-' + cat;
                 const checkbox = document.createElement('input');
