@@ -1864,6 +1864,22 @@
             return { axisLabels, datasets };
         }
 
+        // Helper to get appropriate Y-axis max with headroom
+        function getYAxisMax(datasets) {
+            if (!datasets || datasets.length === 0) return 1.1;
+            let maxValue = 0;
+            datasets.forEach(ds => {
+                if (ds.data && Array.isArray(ds.data)) {
+                    ds.data.forEach(val => {
+                        if (typeof val === 'number' && val > maxValue) maxValue = val;
+                    });
+                }
+            });
+            // Add 10% headroom
+            if (maxValue <= 1) return 1.1;
+            return Math.ceil(maxValue * 1.1 * 10) / 10;
+        }
+
         function renderHeatmap(container, datasets, axisLabels, days, type) {
             const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
             const groupingLabel = '';
@@ -1953,22 +1969,6 @@
             // For hourly with selected metrics, use the new format
             const useSelectiveMetrics = type === 'hourly' && selectedComparisonMetrics.size > 0;
             const axisLabels = useSelectiveMetrics ? SLOT_LABELS : comparisonSeries(days[0], type).axisLabels;
-
-            // Helper to get appropriate Y-axis max with headroom
-            const getYAxisMax = (datasets) => {
-                if (!datasets || datasets.length === 0) return 1.1;
-                let maxValue = 0;
-                datasets.forEach(ds => {
-                    if (ds.data && Array.isArray(ds.data)) {
-                        ds.data.forEach(val => {
-                            if (typeof val === 'number' && val > maxValue) maxValue = val;
-                        });
-                    }
-                });
-                // Add 10% headroom
-                if (maxValue <= 1) return 1.1;
-                return Math.ceil(maxValue * 1.1 * 10) / 10;
-            };
 
             const baseOptions = {
                 responsive: true,
