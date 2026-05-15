@@ -826,6 +826,7 @@
                                 <option value="stacked">Stacked Bar Chart</option>
                                 <option value="area">Area Chart</option>
                                 <option value="step">Step Chart</option>
+                                <option value="heatmap">Heatmap</option>
                             </select>
                         </div>
 
@@ -1863,6 +1864,48 @@
             return { axisLabels, datasets };
         }
 
+        function renderHeatmap(container, datasets, axisLabels, days, type) {
+            const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
+            const groupingLabel = '';
+
+            container.innerHTML = `
+                <div class="charts-grid">
+                    <div class="chart-container" style="grid-column: 1 / -1;">
+                        <div class="chart-header">
+                            <h3 class="chart-title">📊 Heatmap — ${modeLabel} (${days.length} dates)</h3>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="chart-print-btn" onclick="printChart('heatmapContainer')">Print</button>
+                            </div>
+                        </div>
+                        <div id="heatmapContainer" style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px;">
+                            <table style="border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; background: #f8fafc; font-weight: 600;">Metric</th>
+                                        ${days.map(d => `<th style="padding: 8px; text-align: center; border: 1px solid #e5e7eb; background: #f8fafc; font-weight: 600;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${axisLabels.map((label, labelIdx) => `
+                                        <tr>
+                                            <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
+                                            ${datasets.map((ds, dsIdx) => {
+                                                const value = ds.data[labelIdx];
+                                                const normalized = Math.max(0, Math.min(1, value / getYAxisMax(datasets)));
+                                                const hue = normalized * 120;
+                                                const bgColor = `hsl(${hue}, 100%, ${100 - normalized * 50}%)`;
+                                                return `<td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${normalized > 0.5 ? 'white' : 'black'}; font-weight: 500;">${typeof value === 'number' ? value.toFixed(2) : value}</td>`;
+                                            }).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderComparison() {
             const container = document.getElementById('comparisonResults');
             if (!container) return;
@@ -2133,6 +2176,13 @@
                     </div>`;
                     return;
                 }
+
+                // Handle heatmap as special case
+                if (displayType === 'heatmap') {
+                    renderHeatmap(container, datasets, chartAxisLabels, days, type);
+                    return;
+                }
+
                 const chartOptions = JSON.parse(JSON.stringify(overlayOptions));
                 chartOptions.scales.y.max = getYAxisMax(datasets);
 
