@@ -2098,6 +2098,14 @@
                     });
                     chartAxisLabels = comparisonSeries(days[0], type).axisLabels;
                 }
+                // Safeguard: make sure we have datasets to display
+                if (!datasets || datasets.length === 0) {
+                    container.innerHTML = `<div class="empty-message" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                        <p style="margin-bottom: 8px; font-size: 0.95rem;">No data to display</p>
+                        <p style="font-size: 0.85rem;">Check your selections and try again.</p>
+                    </div>`;
+                    return;
+                }
                 const chartOptions = JSON.parse(JSON.stringify(overlayOptions));
                 chartOptions.scales.y.max = getYAxisMax(datasets);
                 charts['cmp-overlay'] = new Chart(
