@@ -1388,6 +1388,7 @@
                     } else {
                         selectedComparisonMetrics.delete(checkbox.value);
                     }
+                    renderComparison();
                 };
                 selectedComparisonMetrics.add(checkbox.value);
 
@@ -1414,6 +1415,7 @@
                     } else {
                         selectedComparisonMetrics.delete(checkbox.value);
                     }
+                    renderComparison();
                 };
 
                 const label = document.createElement('label');
