@@ -2018,8 +2018,18 @@
                     chartAxisLabels = comparison.axisLabels;
                     datasets = comparison.datasets;
                 } else if (type === 'bipgoals') {
-                    datasets = [];
                     const bipNames = allBipGoalNames();
+
+                    // Check if there are any BIP goals
+                    if (!bipNames || bipNames.length === 0) {
+                        container.innerHTML = `<div class="empty-message" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                            <p style="margin-bottom: 8px; font-size: 0.95rem;">No BIP Goals found</p>
+                            <p style="font-size: 0.85rem;">The selected dates don't have any BIP Goals data to compare.</p>
+                        </div>`;
+                        return;
+                    }
+
+                    datasets = [];
                     const singleBipMode = bipNames.length === 1;
 
                     if (singleBipMode) {
