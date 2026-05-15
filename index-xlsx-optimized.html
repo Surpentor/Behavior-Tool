@@ -1863,10 +1863,19 @@
             const bipGoalNames = getBipGoalNames();
 
             let html = '';
+            const totalCharts = trackingMeta.length + bipGoalNames.length;
+
+            // If 2 or fewer total charts, combine into one grid
+            const combineGrids = totalCharts <= 2;
+
+            if (combineGrids && totalCharts > 0) {
+                html += '<div class="charts-grid">';
+            }
 
             if (trackingMeta.length > 0) {
-                html += '<h2 style="color:white;margin:10px 0;">📊 Custom Tracking</h2>';
-                html += '<div class="charts-grid">';
+                if (!combineGrids) html += '<h2 style="color:white;margin:10px 0;">📊 Custom Tracking</h2>';
+                if (!combineGrids) html += '<div class="charts-grid">';
+
                 trackingMeta.forEach(meta => {
                     html += `
                         <div class="chart-container">
@@ -1881,12 +1890,14 @@
                         </div>
                     `;
                 });
-                html += '</div>';
+
+                if (!combineGrids) html += '</div>';
             }
 
             if (bipGoalNames.length > 0) {
-                html += '<h2 style="color:white;margin:10px 0;">🎯 BIP Goals (Detail)</h2>';
-                html += '<div class="charts-grid">';
+                if (!combineGrids) html += '<h2 style="color:white;margin:10px 0;">🎯 BIP Goals (Detail)</h2>';
+                if (!combineGrids) html += '<div class="charts-grid">';
+
                 bipGoalNames.forEach(name => {
                     html += `
                         <div class="chart-container">
@@ -1901,6 +1912,11 @@
                         </div>
                     `;
                 });
+
+                if (!combineGrids) html += '</div>';
+            }
+
+            if (combineGrids && totalCharts > 0) {
                 html += '</div>';
             }
 
