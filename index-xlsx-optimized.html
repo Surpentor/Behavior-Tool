@@ -2368,16 +2368,23 @@
             const headerEl = canvas.closest('.chart-container')?.querySelector('.chart-title');
             title.textContent = headerEl ? headerEl.textContent : chartId;
 
-            // Create a temporary canvas in the modal
-            const newCanvas = document.createElement('canvas');
-            newCanvas.id = chartId + '-expanded';
-            container.innerHTML = '';
-            container.appendChild(newCanvas);
+            // Create a wrapper div for the canvas
+            container.innerHTML = '<div style="position: relative; width: 100%; height: 100%;"><canvas id="' + chartId + '-expanded"></canvas></div>';
+            const newCanvas = document.getElementById(chartId + '-expanded');
 
-            // Get the current chart and recreate it
+            // Get the current chart and recreate it with the same config
             if (charts[chartId]) {
-                const chartConfig = charts[chartId].config;
-                charts[chartId + '-expanded'] = new Chart(newCanvas.getContext('2d'), JSON.parse(JSON.stringify(chartConfig)));
+                const originalChart = charts[chartId];
+                const config = {
+                    type: originalChart.config.type,
+                    data: JSON.parse(JSON.stringify(originalChart.data)),
+                    options: JSON.parse(JSON.stringify(originalChart.options))
+                };
+
+                // Use setTimeout to ensure the canvas is rendered first
+                setTimeout(() => {
+                    charts[chartId + '-expanded'] = new Chart(newCanvas.getContext('2d'), config);
+                }, 0);
             }
 
             modal.classList.add('active');
