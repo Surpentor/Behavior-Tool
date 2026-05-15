@@ -1718,21 +1718,22 @@
                     });
                     colorIdx++;
                 } else if (metric.startsWith('bip:')) {
-                    const parts = metric.slice(4).split(':');
-                    const bipName = parts[0];
-                    const bipMetric = parts[1];
+                    // Parse bip:NAME:TYPE - need to handle colons in NAME
+                    const lastColonIdx = metric.lastIndexOf(':');
+                    const bipMetricType = metric.slice(lastColonIdx + 1);
+                    const bipName = metric.slice(4, lastColonIdx);
                     const g = day.bipGoals.find(x => x.name === bipName);
                     const values = [];
                     for (let slot = 0; slot < 25; slot++) {
-                        if (bipMetric === 'freq') {
+                        if (bipMetricType === 'freq') {
                             values.push(g && g.freqSlots ? (g.freqSlots[slot] != null ? g.freqSlots[slot] : 0) : 0);
-                        } else if (bipMetric === 'dur') {
+                        } else if (bipMetricType === 'dur') {
                             values.push(g && g.durSlots ? (g.durSlots[slot] != null ? g.durSlots[slot] : 0) : 0);
-                        } else if (bipMetric === 'inten') {
+                        } else if (bipMetricType === 'inten') {
                             values.push(g && g.intenSlots ? (g.intenSlots[slot] != null ? g.intenSlots[slot] : 0) : 0);
                         }
                     }
-                    const metricLabel = bipMetric === 'freq' ? 'Frequency' : bipMetric === 'dur' ? 'Duration' : 'Intensity';
+                    const metricLabel = bipMetricType === 'freq' ? 'Frequency' : bipMetricType === 'dur' ? 'Duration' : 'Intensity';
                     datasets.push({
                         label: bipName + ' (' + metricLabel + ')',
                         data: values,
