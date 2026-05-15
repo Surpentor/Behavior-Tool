@@ -1859,7 +1859,10 @@
                         <div class="chart-container">
                             <div class="chart-header">
                                 <h3 class="chart-title">📊 ${meta.label}</h3>
-                                <button class="chart-print-btn" onclick="printChart('tracking-slot-${meta.slot}')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('tracking-slot-${meta.slot}')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('tracking-slot-${meta.slot}')">Print</button>
+                                </div>
                             </div>
                             <canvas id="tracking-slot-${meta.slot}"></canvas>
                         </div>
@@ -1876,7 +1879,10 @@
                         <div class="chart-container">
                             <div class="chart-header">
                                 <h3 class="chart-title">🎯 ${name}</h3>
-                                <button class="chart-print-btn" onclick="printChart('bip-${safeId(name)}')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('bip-${safeId(name)}')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('bip-${safeId(name)}')">Print</button>
+                                </div>
                             </div>
                             <canvas id="bip-${safeId(name)}"></canvas>
                         </div>
