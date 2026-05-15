@@ -1884,6 +1884,22 @@
             const useSelectiveMetrics = type === 'hourly' && selectedComparisonMetrics.size > 0;
             const axisLabels = useSelectiveMetrics ? SLOT_LABELS : comparisonSeries(days[0], type).axisLabels;
 
+            // Helper to get appropriate Y-axis max with headroom
+            const getYAxisMax = (datasets) => {
+                if (!datasets || datasets.length === 0) return 1.1;
+                let maxValue = 0;
+                datasets.forEach(ds => {
+                    if (ds.data && Array.isArray(ds.data)) {
+                        ds.data.forEach(val => {
+                            if (typeof val === 'number' && val > maxValue) maxValue = val;
+                        });
+                    }
+                });
+                // Add 10% headroom
+                if (maxValue <= 1) return 1.1;
+                return Math.ceil(maxValue * 1.1 * 10) / 10;
+            };
+
             const baseOptions = {
                 responsive: true,
                 maintainAspectRatio: true,
@@ -1998,9 +2014,11 @@
                     });
                     chartAxisLabels = comparisonSeries(days[0], type).axisLabels;
                 }
+                const chartOptions = JSON.parse(JSON.stringify(overlayOptions));
+                chartOptions.scales.y.max = getYAxisMax(datasets);
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
-                    { type: chartType, data: { labels: chartAxisLabels, datasets }, options: overlayOptions }
+                    { type: chartType, data: { labels: chartAxisLabels, datasets }, options: chartOptions }
                 );
             } else {
                 // Special case: hourly with no metrics selected
@@ -2050,6 +2068,8 @@
                         }];
                     }
 
+                    const chartOptions = JSON.parse(JSON.stringify(baseOptions));
+                    chartOptions.scales.y.max = getYAxisMax(datasets);
                     charts['cmp-sep-' + i] = new Chart(
                         document.getElementById('cmp-sep-' + i + '-canvas').getContext('2d'),
                         {
@@ -2058,7 +2078,7 @@
                                 labels,
                                 datasets
                             },
-                            options: baseOptions
+                            options: chartOptions
                         }
                     );
                 });
