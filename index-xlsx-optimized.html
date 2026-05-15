@@ -1652,6 +1652,66 @@
             return { axisLabels, values };
         }
 
+        function getCategoryComparisonByDate(days) {
+            // Group: Categories on X-axis, dates as separate bars for each category
+            const categories = Array.from(enabledCategories);
+            const axisLabels = categories;
+            const datasets = days.map((day, idx) => ({
+                label: day.date.toLocaleDateString(),
+                data: categories.map(cat => {
+                    const cd = day.categories && day.categories[cat];
+                    return cd ? cd.percentage : 0;
+                }),
+                backgroundColor: COMPARISON_COLORS[idx % COMPARISON_COLORS.length]
+            }));
+            return { axisLabels, datasets };
+        }
+
+        function getCategoryComparisonByCategory(days) {
+            // Group: Dates on X-axis, categories as separate bars for each date
+            const categories = Array.from(enabledCategories);
+            const axisLabels = days.map(d => d.date.toLocaleDateString());
+            const datasets = categories.map((cat, idx) => ({
+                label: cat,
+                data: days.map(day => {
+                    const cd = day.categories && day.categories[cat];
+                    return cd ? cd.percentage : 0;
+                }),
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][idx % 4]
+            }));
+            return { axisLabels, datasets };
+        }
+
+        function getTrackingComparisonByDate(days) {
+            // Group: Tracking metrics on X-axis, dates as separate bars for each metric
+            const trackingMeta = studentData.trackingMeta || [];
+            const axisLabels = trackingMeta.map(m => m.label);
+            const datasets = days.map((day, idx) => ({
+                label: day.date.toLocaleDateString(),
+                data: trackingMeta.map(meta => {
+                    const t = day.tracking && day.tracking[meta.slot];
+                    return t ? (t.value || 0) : 0;
+                }),
+                backgroundColor: COMPARISON_COLORS[idx % COMPARISON_COLORS.length]
+            }));
+            return { axisLabels, datasets };
+        }
+
+        function getTrackingComparisonByCategory(days) {
+            // Group: Dates on X-axis, tracking metrics as separate bars for each date
+            const trackingMeta = studentData.trackingMeta || [];
+            const axisLabels = days.map(d => d.date.toLocaleDateString());
+            const datasets = trackingMeta.map((meta, idx) => ({
+                label: meta.label,
+                data: days.map(day => {
+                    const t = day.tracking && day.tracking[meta.slot];
+                    return t ? (t.value || 0) : 0;
+                }),
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][idx % 4]
+            }));
+            return { axisLabels, datasets };
+        }
+
         function renderComparison() {
             const container = document.getElementById('comparisonResults');
             if (!container) return;
@@ -1671,12 +1731,13 @@
 
             const type = document.getElementById('comparisonChartType').value;
             const mode = document.querySelector('input[name="comparisonMode"]:checked').value;
+            const grouping = document.querySelector('input[name="comparisonGrouping"]:checked')?.value;
             const chartType = type === 'hourly' ? 'line' : 'bar';
             const indices = Array.from(selectedDatesForComparison).sort((a, b) => a - b);
             const days = indices.map(i => studentData.days[i]);
             const titleMap = {
                 hourly: '⏰ Hourly Pattern',
-                categories: '📈 Category Breakdown (%)',
+                categories: '📈 Category Breakdown',
                 bipgoals: '🎯 BIP Goals',
                 tracking: '📊 Custom Tracking'
             };
@@ -1703,12 +1764,14 @@
                 }
             } : baseOptions;
 
-            if (mode === 'overlay') {
+            if (mode === 'overlay' || mode === 'combined') {
+                const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
+                const groupingLabel = grouping === 'by-category' ? ' (by category)' : grouping === 'by-date' ? ' (by date)' : '';
                 container.innerHTML = `
                     <div class="charts-grid">
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
-                                <h3 class="chart-title">${titleMap[type]} — Overlay (${days.length} dates)</h3>
+                                <h3 class="chart-title">${titleMap[type]} — ${modeLabel}${groupingLabel} (${days.length} dates)</h3>
                                 <div style="display: flex; gap: 8px;">
                                     <button class="chart-expand-btn" onclick="expandChart('cmp-overlay-canvas')">⛶</button>
                                     <button class="chart-print-btn" onclick="printChart('cmp-overlay-canvas')">Print</button>
@@ -1718,7 +1781,7 @@
                         </div>
                     </div>`;
 
-                let datasets;
+                let datasets, axisLabels;
                 if (useSelectiveMetrics) {
                     datasets = [];
                     days.forEach((day, dayIdx) => {
@@ -1737,6 +1800,41 @@
                             });
                         });
                     });
+                } else if (type === 'categories') {
+                    const comparison = grouping === 'by-category' ?
+                        getCategoryComparisonByCategory(days) :
+                        getCategoryComparisonByDate(days);
+                    axisLabels = comparison.axisLabels;
+                    datasets = comparison.datasets;
+                } else if (type === 'tracking') {
+                    const comparison = grouping === 'by-category' ?
+                        getTrackingComparisonByCategory(days) :
+                        getTrackingComparisonByDate(days);
+                    axisLabels = comparison.axisLabels;
+                    datasets = comparison.datasets;
+                } else if (type === 'bipgoals') {
+                    datasets = [];
+                    days.forEach((day, i) => {
+                        const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
+                        const bipNames = allBipGoalNames();
+                        bipNames.forEach(name => {
+                            const g = day.bipGoals.find(x => x.name === name);
+                            datasets.push({
+                                label: day.date.toLocaleDateString() + ' - ' + name,
+                                data: [
+                                    g ? g.frequency : 0,
+                                    g ? g.duration : 0,
+                                    g ? g.intensity : 0
+                                ],
+                                borderColor: c,
+                                backgroundColor: c + '20',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 2
+                            });
+                        });
+                    });
+                    axisLabels = ['Frequency', 'Duration (min)', 'Intensity (1-5)'];
                 } else {
                     datasets = days.map((day, i) => {
                         const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
@@ -1750,6 +1848,7 @@
                             borderWidth: 2
                         };
                     });
+                    axisLabels = comparisonSeries(days[0], type).axisLabels;
                 }
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
