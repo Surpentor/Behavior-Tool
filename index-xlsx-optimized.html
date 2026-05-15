@@ -759,7 +759,10 @@
                         <!-- Step 2: Configure based on type -->
                         <!-- Hourly configuration -->
                         <div class="control-group" id="comparisonConfigHourly" style="margin-top: 15px; display: none;">
-                            <label><strong>2. Select metrics to display:</strong></label>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <label><strong>2. Select metrics to display:</strong></label>
+                                <button class="btn btn-secondary" onclick="clearComparisonMetrics()" style="padding: 6px 12px; font-size: 0.85rem;">Clear All</button>
+                            </div>
                             <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px;"></div>
                         </div>
 
@@ -1392,16 +1395,67 @@
 
         function buildDateSelectionArea() {
             const area = document.getElementById('dateSelectionArea');
-            area.innerHTML = '<div class="checkbox-group">' +
-                studentData.days.map((day, idx) =>
-                    `<div class="checkbox-item">
-                        <input type="checkbox" id="date-${idx}" onchange="toggleComparisonDate(${idx})">
-                        <label for="date-${idx}">${day.date.toLocaleDateString()}</label>
-                    </div>`
-                ).join('') +
-                '</div>';
-            // Initialize metrics panel with current chart type
+
+            // Group dates by month
+            const monthMap = {};
+            studentData.days.forEach((day, idx) => {
+                const monthKey = day.date.getFullYear() + '-' + String(day.date.getMonth() + 1).padStart(2, '0');
+                if (!monthMap[monthKey]) {
+                    monthMap[monthKey] = [];
+                }
+                monthMap[monthKey].push({ day, idx });
+            });
+
+            const months = Object.keys(monthMap).sort();
+            const defaultMonth = months.length > 0 ? months[months.length - 1] : null;
+
+            let html = '<div style="margin-bottom: 12px;">';
+            html += '<label for="monthFilter" style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem;">Filter by month:</label>';
+            html += '<select id="monthFilter" onchange="updateDateCheckboxes()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">';
+
+            months.forEach(m => {
+                const [year, month] = m.split('-');
+                const date = new Date(year, parseInt(month) - 1);
+                const label = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                html += `<option value="${m}" ${m === defaultMonth ? 'selected' : ''}>${label}</option>`;
+            });
+
+            html += '</select></div>';
+            html += '<div class="checkbox-group" id="dateCheckboxList"></div>';
+
+            area.innerHTML = html;
+
+            // Populate initial month
+            updateDateCheckboxes();
             updateComparisonConfig();
+        }
+
+        function updateDateCheckboxes() {
+            const monthFilter = document.getElementById('monthFilter');
+            const selectedMonth = monthFilter ? monthFilter.value : null;
+            const checkboxList = document.getElementById('dateCheckboxList');
+
+            if (!selectedMonth) {
+                checkboxList.innerHTML = '';
+                return;
+            }
+
+            const monthMap = {};
+            studentData.days.forEach((day, idx) => {
+                const monthKey = day.date.getFullYear() + '-' + String(day.date.getMonth() + 1).padStart(2, '0');
+                if (!monthMap[monthKey]) {
+                    monthMap[monthKey] = [];
+                }
+                monthMap[monthKey].push({ day, idx });
+            });
+
+            const daysInMonth = monthMap[selectedMonth] || [];
+            checkboxList.innerHTML = daysInMonth.map(({day, idx}) =>
+                `<div class="checkbox-item">
+                    <input type="checkbox" id="date-${idx}" onchange="toggleComparisonDate(${idx})" ${selectedDatesForComparison.has(idx) ? 'checked' : ''}>
+                    <label for="date-${idx}">${day.date.toLocaleDateString()}</label>
+                </div>`
+            ).join('');
         }
 
         let selectedComparisonMetrics = new Set();
@@ -1444,38 +1498,82 @@
             checkboxes.innerHTML = '';
             selectedComparisonMetrics.clear();
 
-            // Add category checkboxes
-            if (allCategoryNames) {
-                allCategoryNames.forEach(cat => {
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.id = 'cmp-metric-cat-' + cat;
-                    checkbox.value = 'cat:' + cat;
-                    checkbox.checked = true;
-                    checkbox.onchange = () => {
-                        if (checkbox.checked) {
-                            selectedComparisonMetrics.add(checkbox.value);
-                        } else {
-                            selectedComparisonMetrics.delete(checkbox.value);
-                        }
-                        renderComparison();
-                    };
-                    selectedComparisonMetrics.add(checkbox.value);
+            const coreBehaviors = [
+                'Complete Work',
+                'Hands, Body, Objects to self',
+                'Stay in Designated area',
+                'App. language/conversations'
+            ];
 
-                    const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.gap = '6px';
-                    label.style.cursor = 'pointer';
-                    label.style.fontSize = '0.9rem';
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(cat));
-                    checkboxes.appendChild(label);
-                });
+            // Helper to create checkbox
+            const createCheckboxLabel = (id, value, label, onChange) => {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = id;
+                checkbox.value = value;
+                checkbox.checked = true;
+                checkbox.onchange = onChange;
+                selectedComparisonMetrics.add(value);
+
+                const labelEl = document.createElement('label');
+                labelEl.style.display = 'flex';
+                labelEl.style.alignItems = 'center';
+                labelEl.style.gap = '6px';
+                labelEl.style.cursor = 'pointer';
+                labelEl.style.fontSize = '0.9rem';
+                labelEl.appendChild(checkbox);
+                labelEl.appendChild(document.createTextNode(label));
+                return labelEl;
+            };
+
+            // Helper to add section
+            const addSection = (title, items) => {
+                if (items.length === 0) return;
+                const section = document.createElement('div');
+                section.style.marginBottom = '12px';
+                const heading = document.createElement('div');
+                heading.style.fontSize = '0.85rem';
+                heading.style.fontWeight = '600';
+                heading.style.color = '#64748b';
+                heading.style.marginBottom = '6px';
+                heading.style.textTransform = 'uppercase';
+                heading.style.letterSpacing = '0.5px';
+                heading.textContent = title;
+                section.appendChild(heading);
+                items.forEach(item => section.appendChild(item));
+                checkboxes.appendChild(section);
+            };
+
+            // Core Behaviors
+            const coreItems = coreBehaviors
+                .filter(cat => allCategoryNames.includes(cat))
+                .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
+                    if (document.getElementById('cmp-metric-cat-' + cat).checked) {
+                        selectedComparisonMetrics.add('cat:' + cat);
+                    } else {
+                        selectedComparisonMetrics.delete('cat:' + cat);
+                    }
+                    renderComparison();
+                }));
+            addSection('Core Behaviors', coreItems);
+
+            // Other categories
+            const otherCatItems = allCategoryNames
+                .filter(cat => !coreBehaviors.includes(cat))
+                .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
+                    if (document.getElementById('cmp-metric-cat-' + cat).checked) {
+                        selectedComparisonMetrics.add('cat:' + cat);
+                    } else {
+                        selectedComparisonMetrics.delete('cat:' + cat);
+                    }
+                    renderComparison();
+                }));
+            if (otherCatItems.length > 0) {
+                addSection('Other Categories', otherCatItems);
             }
 
-            // Add tracking checkboxes
-            (studentData.trackingMeta || []).forEach(meta => {
+            // Custom Tracking
+            const trackingItems = (studentData.trackingMeta || []).map(meta => {
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.id = 'cmp-metric-trk-' + meta.slot;
@@ -1488,6 +1586,7 @@
                     }
                     renderComparison();
                 };
+                selectedComparisonMetrics.add('trk:' + meta.slot);
 
                 const label = document.createElement('label');
                 label.style.display = 'flex';
@@ -1497,10 +1596,12 @@
                 label.style.fontSize = '0.9rem';
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(meta.label));
-                checkboxes.appendChild(label);
+                return label;
             });
+            addSection('Custom Tracking', trackingItems);
 
-            // Add BIP goal checkboxes
+            // BIP Goals
+            const bipItems = [];
             allBipGoalNames().forEach(name => {
                 ['freq', 'dur', 'inten'].forEach((metric) => {
                     const metricLabel = metric === 'freq' ? 'Frequency' : metric === 'dur' ? 'Duration' : 'Intensity';
@@ -1516,6 +1617,7 @@
                         }
                         renderComparison();
                     };
+                    selectedComparisonMetrics.add('bip:' + name + ':' + metric);
 
                     const label = document.createElement('label');
                     label.style.display = 'flex';
@@ -1525,8 +1627,16 @@
                     label.style.fontSize = '0.9rem';
                     label.appendChild(checkbox);
                     label.appendChild(document.createTextNode(name + ' — ' + metricLabel));
-                    checkboxes.appendChild(label);
+                    bipItems.push(label);
                 });
+            });
+            addSection('BIP Goals', bipItems);
+        }
+
+        function clearComparisonMetrics() {
+            document.querySelectorAll('#comparisonMetricsCheckboxes input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                cb.onchange();
             });
         }
 
@@ -1796,7 +1906,8 @@
                         </div>
                     </div>`;
 
-                let datasets, axisLabels;
+                let datasets;
+                let chartAxisLabels = axisLabels;
                 if (useSelectiveMetrics) {
                     datasets = [];
                     days.forEach((day, dayIdx) => {
@@ -1819,13 +1930,13 @@
                     const comparison = grouping === 'by-category' ?
                         getCategoryComparisonByCategory(days) :
                         getCategoryComparisonByDate(days);
-                    axisLabels = comparison.axisLabels;
+                    chartAxisLabels = comparison.axisLabels;
                     datasets = comparison.datasets;
                 } else if (type === 'tracking') {
                     const comparison = grouping === 'by-category' ?
                         getTrackingComparisonByCategory(days) :
                         getTrackingComparisonByDate(days);
-                    axisLabels = comparison.axisLabels;
+                    chartAxisLabels = comparison.axisLabels;
                     datasets = comparison.datasets;
                 } else if (type === 'bipgoals') {
                     datasets = [];
@@ -1849,7 +1960,7 @@
                             });
                         });
                     });
-                    axisLabels = ['Frequency', 'Duration (min)', 'Intensity (1-5)'];
+                    chartAxisLabels = ['Frequency', 'Duration (min)', 'Intensity (1-5)'];
                 } else {
                     datasets = days.map((day, i) => {
                         const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
@@ -1863,11 +1974,11 @@
                             borderWidth: 2
                         };
                     });
-                    axisLabels = comparisonSeries(days[0], type).axisLabels;
+                    chartAxisLabels = comparisonSeries(days[0], type).axisLabels;
                 }
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
-                    { type: chartType, data: { labels: axisLabels, datasets }, options: overlayOptions }
+                    { type: chartType, data: { labels: chartAxisLabels, datasets }, options: overlayOptions }
                 );
             } else {
                 let html = '<div class="charts-grid">';
