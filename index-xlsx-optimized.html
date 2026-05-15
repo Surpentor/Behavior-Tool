@@ -38,27 +38,6 @@
 
         .container { max-width: 1440px; margin: 0 auto; }
 
-        .header {
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(10px);
-            padding: 36px 24px;
-            border-radius: var(--radius);
-            text-align: center;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-lg);
-        }
-        .header h1 {
-            font-size: 2.4rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.02em;
-        }
-        .header p { font-size: 1.05rem; color: var(--text-secondary); }
-
         .upload-area {
             background: rgba(255, 255, 255, 0.97);
             border: 2px dashed #c7d2fe;
@@ -284,6 +263,82 @@
         }
         .chart-print-btn:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
+        .chart-expand-btn {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+        .chart-expand-btn:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        .chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            padding: 24px;
+            overflow: auto;
+        }
+        .chart-modal.active { display: flex; align-items: center; justify-content: center; }
+
+        .chart-modal-content {
+            background: white;
+            border-radius: var(--radius);
+            width: 95%;
+            max-width: 1400px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chart-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-modal-title { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+
+        .chart-modal-close {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .chart-modal-close:hover { background: var(--danger-color); color: white; border-color: var(--danger-color); }
+
+        .chart-modal-body {
+            flex: 1;
+            padding: 24px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .chart-modal-canvas-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
         .data-quality-item {
             padding: 12px 14px;
             border-left: 4px solid var(--warning-color);
@@ -476,11 +531,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📊 Behavior School Data Tool (XLSX)</h1>
-            <p>Multi-month analysis • Dynamic tracking • No data saved</p>
-        </div>
-
         <div id="uploadSection">
             <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                 <h2>📁 Upload Behavior Tracking File</h2>
@@ -577,7 +627,10 @@
                         <div class="chart-container">
                             <div class="chart-header">
                                 <h3 class="chart-title">📈 Behavior Categories Over Time</h3>
-                                <button class="chart-print-btn" onclick="printChart('categoryTrend')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('categoryTrend')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('categoryTrend')">Print</button>
+                                </div>
                             </div>
                             <canvas id="categoryTrend"></canvas>
                         </div>
@@ -585,7 +638,10 @@
                         <div class="chart-container">
                             <div class="chart-header">
                                 <h3 class="chart-title">📊 Category Performance</h3>
-                                <button class="chart-print-btn" onclick="printChart('categoryPerformance')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('categoryPerformance')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('categoryPerformance')">Print</button>
+                                </div>
                             </div>
                             <canvas id="categoryPerformance"></canvas>
                         </div>
@@ -607,7 +663,10 @@
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
                                 <h3 class="chart-title">⏰ Time-of-Day Patterns</h3>
-                                <button class="chart-print-btn" onclick="printChart('timeOfDay')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('timeOfDay')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('timeOfDay')">Print</button>
+                                </div>
                             </div>
                             <canvas id="timeOfDay"></canvas>
                         </div>
@@ -640,7 +699,10 @@
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
                                 <h3 class="chart-title">🎯 BIP Goals Tracking</h3>
-                                <button class="chart-print-btn" onclick="printChart('bipGoals')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('bipGoals')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('bipGoals')">Print</button>
+                                </div>
                             </div>
                             <canvas id="bipGoals"></canvas>
                         </div>
@@ -668,12 +730,17 @@
 
                         <div class="control-group" style="margin-top: 15px;">
                             <label><strong>2. Choose chart to compare:</strong></label>
-                            <select id="comparisonChartType" onchange="renderComparison()">
+                            <select id="comparisonChartType" onchange="updateComparisonMetrics(); renderComparison()">
                                 <option value="hourly">⏰ Hourly Pattern (avg behavior per time slot)</option>
                                 <option value="categories">📈 Category Breakdown (% per category)</option>
                                 <option value="bipgoals">🎯 BIP Goals (frequency / duration / intensity)</option>
                                 <option value="tracking">📊 Custom Tracking (value per metric)</option>
                             </select>
+                        </div>
+
+                        <div class="control-group" id="comparisonMetricsGroup" style="margin-top: 15px; display: none;">
+                            <label><strong>Select metrics to display (mix & match):</strong></label>
+                            <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;"></div>
                         </div>
 
                         <div class="control-group" style="margin-top: 15px;">
@@ -1274,6 +1341,104 @@
                 '</div>';
         }
 
+        let selectedComparisonMetrics = new Set();
+
+        function updateComparisonMetrics() {
+            const type = document.getElementById('comparisonChartType').value;
+            const group = document.getElementById('comparisonMetricsGroup');
+            const checkboxes = document.getElementById('comparisonMetricsCheckboxes');
+
+            if (type !== 'hourly') {
+                group.style.display = 'none';
+                selectedComparisonMetrics.clear();
+                return;
+            }
+
+            group.style.display = 'block';
+            checkboxes.innerHTML = '';
+            selectedComparisonMetrics.clear();
+
+            // Add category checkboxes
+            allCategoryNames.forEach(cat => {
+                const id = 'cmp-metric-cat-' + cat;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = id;
+                checkbox.value = 'cat:' + cat;
+                checkbox.checked = true;
+                checkbox.onchange = () => {
+                    if (checkbox.checked) {
+                        selectedComparisonMetrics.add(checkbox.value);
+                    } else {
+                        selectedComparisonMetrics.delete(checkbox.value);
+                    }
+                };
+                selectedComparisonMetrics.add(checkbox.value);
+
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '6px';
+                label.style.cursor = 'pointer';
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(cat));
+                checkboxes.appendChild(label);
+            });
+
+            // Add tracking checkboxes
+            (studentData.trackingMeta || []).forEach(meta => {
+                const id = 'cmp-metric-trk-' + meta.slot;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = id;
+                checkbox.value = 'trk:' + meta.slot;
+                checkbox.onchange = () => {
+                    if (checkbox.checked) {
+                        selectedComparisonMetrics.add(checkbox.value);
+                    } else {
+                        selectedComparisonMetrics.delete(checkbox.value);
+                    }
+                };
+
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '6px';
+                label.style.cursor = 'pointer';
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode('📊 ' + meta.label));
+                checkboxes.appendChild(label);
+            });
+
+            // Add BIP goal checkboxes with metric selection
+            allBipGoalNames().forEach(name => {
+                ['freq', 'dur', 'inten'].forEach((metric, idx) => {
+                    const metricLabel = metric === 'freq' ? 'Frequency' : metric === 'dur' ? 'Duration' : 'Intensity';
+                    const id = 'cmp-metric-bip-' + name + '-' + metric;
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = id;
+                    checkbox.value = 'bip:' + name + ':' + metric;
+                    checkbox.onchange = () => {
+                        if (checkbox.checked) {
+                            selectedComparisonMetrics.add(checkbox.value);
+                        } else {
+                            selectedComparisonMetrics.delete(checkbox.value);
+                        }
+                    };
+
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.gap = '6px';
+                    label.style.cursor = 'pointer';
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode('🎯 ' + name + ' (' + metricLabel + ')'));
+                    checkboxes.appendChild(label);
+                });
+            });
+        }
+
         function toggleComparisonDate(idx) {
             if (document.getElementById('date-' + idx).checked) {
                 if (selectedDatesForComparison.size < 5) {
@@ -1300,8 +1465,77 @@
 
         // For one day + chart type, return { axisLabels, values } — a single
         // series suitable for either an overlay dataset or a standalone chart.
+        function comparisonSeriesHourly(day) {
+            // For hourly with selected metrics, return array of datasets
+            const datasets = [];
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#d946ef'];
+            let colorIdx = 0;
+
+            selectedComparisonMetrics.forEach(metric => {
+                if (metric.startsWith('cat:')) {
+                    const cat = metric.slice(4);
+                    const values = [];
+                    for (let slot = 0; slot < 25; slot++) {
+                        const cd = day.categories && day.categories[cat];
+                        values.push(cd && cd.slots ? (cd.slots[slot] != null ? cd.slots[slot] : 0) : 0);
+                    }
+                    datasets.push({
+                        label: cat,
+                        data: values,
+                        borderColor: colors[colorIdx % colors.length],
+                        backgroundColor: colors[colorIdx % colors.length] + 'cc',
+                        borderWidth: 1
+                    });
+                    colorIdx++;
+                } else if (metric.startsWith('trk:')) {
+                    const trkSlot = parseInt(metric.slice(4));
+                    const meta = (studentData.trackingMeta || []).find(m => m.slot === trkSlot);
+                    const values = [];
+                    for (let slot = 0; slot < 25; slot++) {
+                        const t = day.tracking && day.tracking[trkSlot];
+                        values.push(t && t.slots ? (t.slots[slot] != null ? t.slots[slot] : 0) : 0);
+                    }
+                    datasets.push({
+                        label: meta ? meta.label : ('Tracking ' + trkSlot),
+                        data: values,
+                        borderColor: colors[colorIdx % colors.length],
+                        backgroundColor: colors[colorIdx % colors.length] + 'cc',
+                        borderWidth: 1
+                    });
+                    colorIdx++;
+                } else if (metric.startsWith('bip:')) {
+                    const parts = metric.slice(4).split(':');
+                    const bipName = parts[0];
+                    const bipMetric = parts[1];
+                    const g = day.bipGoals.find(x => x.name === bipName);
+                    const values = [];
+                    for (let slot = 0; slot < 25; slot++) {
+                        if (bipMetric === 'freq') {
+                            values.push(g && g.freqSlots ? (g.freqSlots[slot] != null ? g.freqSlots[slot] : 0) : 0);
+                        } else if (bipMetric === 'dur') {
+                            values.push(g && g.durSlots ? (g.durSlots[slot] != null ? g.durSlots[slot] : 0) : 0);
+                        } else if (bipMetric === 'inten') {
+                            values.push(g && g.intenSlots ? (g.intenSlots[slot] != null ? g.intenSlots[slot] : 0) : 0);
+                        }
+                    }
+                    const metricLabel = bipMetric === 'freq' ? 'Frequency' : bipMetric === 'dur' ? 'Duration' : 'Intensity';
+                    datasets.push({
+                        label: bipName + ' (' + metricLabel + ')',
+                        data: values,
+                        borderColor: colors[colorIdx % colors.length],
+                        backgroundColor: colors[colorIdx % colors.length] + 'cc',
+                        borderWidth: 1
+                    });
+                    colorIdx++;
+                }
+            });
+
+            return datasets.length > 0 ? datasets : [{label: 'No metrics selected', data: Array(25).fill(0), borderColor: '#ccc', backgroundColor: '#cccccc', borderWidth: 1}];
+        }
+
         function comparisonSeries(day, type) {
             if (type === 'hourly') {
+                // Return the old format for compatibility
                 const values = [];
                 for (let slot = 0; slot < 25; slot++) {
                     let sum = 0, count = 0;
@@ -1370,7 +1604,10 @@
                 bipgoals: '🎯 BIP Goals',
                 tracking: '📊 Custom Tracking'
             };
-            const axisLabels = comparisonSeries(days[0], type).axisLabels;
+
+            // For hourly with selected metrics, use the new format
+            const useSelectiveMetrics = type === 'hourly' && selectedComparisonMetrics.size > 0;
+            const axisLabels = useSelectiveMetrics ? SLOT_LABELS : comparisonSeries(days[0], type).axisLabels;
 
             const baseOptions = {
                 responsive: true,
@@ -1385,23 +1622,48 @@
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
                                 <h3 class="chart-title">${titleMap[type]} — Overlay (${days.length} dates)</h3>
-                                <button class="chart-print-btn" onclick="printChart('cmp-overlay-canvas')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('cmp-overlay-canvas')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('cmp-overlay-canvas')">Print</button>
+                                </div>
                             </div>
                             <canvas id="cmp-overlay-canvas"></canvas>
                         </div>
                     </div>`;
-                const datasets = days.map((day, i) => {
-                    const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
-                    return {
-                        label: day.date.toLocaleDateString(),
-                        data: comparisonSeries(day, type).values,
-                        borderColor: c,
-                        backgroundColor: chartType === 'line' ? c + '20' : c,
-                        tension: 0.4,
-                        fill: false,
-                        borderWidth: 2
-                    };
-                });
+
+                let datasets;
+                if (useSelectiveMetrics) {
+                    datasets = [];
+                    days.forEach((day, dayIdx) => {
+                        const metricDatasets = comparisonSeriesHourly(day);
+                        metricDatasets.forEach((ds, metricIdx) => {
+                            const c = COMPARISON_COLORS[dayIdx % COMPARISON_COLORS.length];
+                            datasets.push({
+                                label: day.date.toLocaleDateString() + ' - ' + ds.label,
+                                data: ds.data,
+                                borderColor: c,
+                                backgroundColor: chartType === 'line' ? c + '20' : c,
+                                borderDash: metricIdx > 0 ? [5, 5] : [],
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 2
+                            });
+                        });
+                    });
+                } else {
+                    datasets = days.map((day, i) => {
+                        const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
+                        return {
+                            label: day.date.toLocaleDateString(),
+                            data: comparisonSeries(day, type).values,
+                            borderColor: c,
+                            backgroundColor: chartType === 'line' ? c + '20' : c,
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2
+                        };
+                    });
+                }
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
                     { type: chartType, data: { labels: axisLabels, datasets }, options: baseOptions }
@@ -1413,7 +1675,10 @@
                         <div class="chart-container">
                             <div class="chart-header">
                                 <h3 class="chart-title">${titleMap[type]} — ${day.date.toLocaleDateString()}</h3>
-                                <button class="chart-print-btn" onclick="printChart('cmp-sep-${i}-canvas')">Print</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="chart-expand-btn" onclick="expandChart('cmp-sep-${i}-canvas')">⛶</button>
+                                    <button class="chart-print-btn" onclick="printChart('cmp-sep-${i}-canvas')">Print</button>
+                                </div>
                             </div>
                             <canvas id="cmp-sep-${i}-canvas"></canvas>
                         </div>`;
@@ -1422,22 +1687,33 @@
                 container.innerHTML = html;
                 days.forEach((day, i) => {
                     const c = COMPARISON_COLORS[i % COMPARISON_COLORS.length];
-                    const series = comparisonSeries(day, type);
+                    let datasets;
+                    let labels;
+
+                    if (useSelectiveMetrics) {
+                        datasets = comparisonSeriesHourly(day);
+                        labels = axisLabels;
+                    } else {
+                        const series = comparisonSeries(day, type);
+                        labels = series.axisLabels;
+                        datasets = [{
+                            label: day.date.toLocaleDateString(),
+                            data: series.values,
+                            borderColor: c,
+                            backgroundColor: chartType === 'line' ? c + '20' : c,
+                            tension: 0.4,
+                            fill: chartType === 'line',
+                            borderWidth: 2
+                        }];
+                    }
+
                     charts['cmp-sep-' + i] = new Chart(
                         document.getElementById('cmp-sep-' + i + '-canvas').getContext('2d'),
                         {
                             type: chartType,
                             data: {
-                                labels: series.axisLabels,
-                                datasets: [{
-                                    label: day.date.toLocaleDateString(),
-                                    data: series.values,
-                                    borderColor: c,
-                                    backgroundColor: chartType === 'line' ? c + '20' : c,
-                                    tension: 0.4,
-                                    fill: chartType === 'line',
-                                    borderWidth: 2
-                                }]
+                                labels,
+                                datasets
                             },
                             options: baseOptions
                         }
@@ -1784,6 +2060,14 @@
                 };
             });
 
+            // Calculate max value with 110% buffer
+            let maxValue = 0;
+            datasets.forEach(ds => {
+                const dsMax = Math.max(...ds.data);
+                if (dsMax > maxValue) maxValue = dsMax;
+            });
+            const yMax = Math.ceil(maxValue * 1.1 * 10) / 10 || (metric === 'percentage' ? 100 : 25);
+
             charts.categoryTrend = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
@@ -1794,7 +2078,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                    scales: { y: { beginAtZero: true, max: yMax } }
                 }
             });
         }
@@ -2072,6 +2356,47 @@
                     }
                 });
             });
+        }
+
+        function expandChart(chartId) {
+            const canvas = document.getElementById(chartId);
+            if (!canvas) return;
+            const container = document.getElementById('chartModalContainer');
+            const title = document.getElementById('chartModalTitle');
+            const modal = document.getElementById('chartModal');
+
+            const headerEl = canvas.closest('.chart-container')?.querySelector('.chart-title');
+            title.textContent = headerEl ? headerEl.textContent : chartId;
+
+            // Create a temporary canvas in the modal
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = chartId + '-expanded';
+            container.innerHTML = '';
+            container.appendChild(newCanvas);
+
+            // Get the current chart and recreate it
+            if (charts[chartId]) {
+                const chartConfig = charts[chartId].config;
+                charts[chartId + '-expanded'] = new Chart(newCanvas.getContext('2d'), JSON.parse(JSON.stringify(chartConfig)));
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeChartModal() {
+            const modal = document.getElementById('chartModal');
+            const container = document.getElementById('chartModalContainer');
+
+            // Destroy the expanded chart if it exists
+            Object.keys(charts).forEach(k => {
+                if (k.endsWith('-expanded')) {
+                    charts[k].destroy();
+                    delete charts[k];
+                }
+            });
+
+            container.innerHTML = '';
+            modal.classList.remove('active');
         }
 
         function printChart(elementId, isHtml) {
@@ -2535,5 +2860,18 @@
             }
         });
     </script>
+
+    <!-- Chart Expansion Modal -->
+    <div id="chartModal" class="chart-modal">
+        <div class="chart-modal-content">
+            <div class="chart-modal-header">
+                <h2 class="chart-modal-title" id="chartModalTitle">Chart</h2>
+                <button class="chart-modal-close" onclick="closeChartModal()">✕</button>
+            </div>
+            <div class="chart-modal-body">
+                <div class="chart-modal-canvas-container" id="chartModalContainer"></div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
