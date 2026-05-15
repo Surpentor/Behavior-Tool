@@ -1410,6 +1410,8 @@
             const defaultMonth = months.length > 0 ? months[months.length - 1] : null;
 
             let html = '<div style="margin-bottom: 12px;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">';
+            html += '<div style="flex: 1;">';
             html += '<label for="monthFilter" style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem;">Filter by month:</label>';
             html += '<select id="monthFilter" onchange="updateDateCheckboxes()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">';
 
@@ -1420,7 +1422,11 @@
                 html += `<option value="${m}" ${m === defaultMonth ? 'selected' : ''}>${label}</option>`;
             });
 
-            html += '</select></div>';
+            html += '</select>';
+            html += '</div>';
+            html += '<button class="btn btn-secondary" onclick="clearComparisonDates()" style="padding: 6px 12px; font-size: 0.85rem; align-self: flex-end;">Clear All Dates</button>';
+            html += '</div>';
+            html += '</div>';
             html += '<div class="checkbox-group" id="dateCheckboxList"></div>';
 
             area.innerHTML = html;
@@ -1635,6 +1641,13 @@
 
         function clearComparisonMetrics() {
             document.querySelectorAll('#comparisonMetricsCheckboxes input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                cb.onchange();
+            });
+        }
+
+        function clearComparisonDates() {
+            document.querySelectorAll('#dateCheckboxList input[type="checkbox"]').forEach(cb => {
                 cb.checked = false;
                 cb.onchange();
             });
