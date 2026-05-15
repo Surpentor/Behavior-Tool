@@ -1634,6 +1634,17 @@
                 scales: { y: { beginAtZero: true } }
             };
 
+            // For bar charts in overlay mode, adjust the grouping
+            const overlayOptions = chartType === 'bar' ? {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { stacked: false }
+                }
+            } : baseOptions;
+
             if (mode === 'overlay') {
                 container.innerHTML = `
                     <div class="charts-grid">
@@ -1684,7 +1695,7 @@
                 }
                 charts['cmp-overlay'] = new Chart(
                     document.getElementById('cmp-overlay-canvas').getContext('2d'),
-                    { type: chartType, data: { labels: axisLabels, datasets }, options: baseOptions }
+                    { type: chartType, data: { labels: axisLabels, datasets }, options: overlayOptions }
                 );
             } else {
                 let html = '<div class="charts-grid">';
