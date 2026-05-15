@@ -512,6 +512,9 @@
         .summary-table th.group-head {
             text-align: center;
             background: #eef2ff;
+            position: sticky;
+            top: 0;
+            z-index: 101;
         }
         .summary-table td.date-col, .summary-table th.date-col {
             text-align: left;
@@ -524,8 +527,20 @@
             min-width: 80px;
             max-width: 100px;
         }
-        .summary-table thead th.date-col { background: var(--light-bg); z-index: 102; }
-        .summary-table thead th.group-head.date-col { background: #eef2ff; z-index: 103; }
+        .summary-table thead th.date-col {
+            background: var(--light-bg);
+            z-index: 102;
+            position: sticky;
+            top: 0;
+            left: 0;
+        }
+        .summary-table thead th.group-head.date-col {
+            background: #eef2ff;
+            z-index: 103;
+            position: sticky;
+            top: 0;
+            left: 0;
+        }
         .summary-table tbody tr:nth-child(even) td { background: #f8fafc; }
         .summary-table tbody tr:nth-child(even) td.date-col { background: #f1f5f9; }
         .summary-table tr.avg-row td {
