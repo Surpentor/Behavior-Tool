@@ -610,6 +610,7 @@
                     <button class="tab-button" data-tab="timeofday">⏰ Time-of-Day</button>
                     <button class="tab-button" data-tab="bipgoals">🎯 BIP Goals</button>
                     <button class="tab-button" data-tab="tracking">📊 Custom Tracking</button>
+                    <button class="tab-button" data-tab="heatmap">🔥 Heatmap</button>
                     <button class="tab-button" data-tab="comparisons">📍 Date Comparison</button>
                     <button class="tab-button" data-tab="summary">📋 Summary Table</button>
                     <button class="tab-button" data-tab="settings">⚙️ Settings</button>
@@ -736,6 +737,27 @@
                 <!-- Custom Tracking Tab -->
                 <div id="tracking" class="tab-content">
                     <div id="customTrackingCharts"></div>
+                </div>
+
+                <!-- Heatmap Tab -->
+                <div id="heatmap" class="tab-content">
+                    <div class="controls-panel">
+                        <div class="control-group">
+                            <label><strong>1. Visualization type:</strong></label>
+                            <select id="heatmapType" onchange="generateHeatmapView()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                <option value="timeslot-comparison">Time Slot Comparison — Performance by slot across dates</option>
+                                <option value="category-overview">Category Overview — All categories across dates</option>
+                                <option value="timeslot-average">Time Slot Averages — Average performance for each slot</option>
+                                <option value="daily-summary">Daily Summary — Performance by date and category</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group" style="margin-top: 15px;" id="heatmapConfigPanel">
+                            <!-- Dynamic content based on visualization type -->
+                        </div>
+                    </div>
+
+                    <div id="heatmapResults"></div>
                 </div>
 
                 <!-- Date Comparison Tab -->
@@ -1996,6 +2018,220 @@
             });
 
             document.getElementById('heatmapTableBody').innerHTML = html;
+        }
+
+        function generateHeatmapView() {
+            const type = document.getElementById('heatmapType').value;
+            const configPanel = document.getElementById('heatmapConfigPanel');
+            const resultsPanel = document.getElementById('heatmapResults');
+
+            if (type === 'timeslot-comparison') {
+                configPanel.innerHTML = `
+                    <label><strong>Select metric:</strong></label>
+                    <div style="margin-top: 10px;">
+                        <select id="heatmapMetricSelect" onchange="renderTimeslotHeatmap()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            ${allCategoryNames.map(c => `<option value="cat:${c}">${c}</option>`).join('')}
+                            ${(studentData.trackingMeta || []).map(m => `<option value="trk:${m.slot}">${m.label}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (type === 'category-overview') {
+                configPanel.innerHTML = '';
+            } else if (type === 'timeslot-average') {
+                configPanel.innerHTML = '';
+            } else if (type === 'daily-summary') {
+                configPanel.innerHTML = '';
+            }
+
+            // Render appropriate heatmap
+            switch(type) {
+                case 'timeslot-comparison':
+                    renderTimeslotHeatmap();
+                    break;
+                case 'category-overview':
+                    renderCategoryHeatmap();
+                    break;
+                case 'timeslot-average':
+                    renderTimeslotAverageHeatmap();
+                    break;
+                case 'daily-summary':
+                    renderDailySummaryHeatmap();
+                    break;
+            }
+        }
+
+        function renderTimeslotHeatmap() {
+            const metricSelect = document.getElementById('heatmapMetricSelect');
+            if (!metricSelect) return;
+
+            const selectedMetric = metricSelect.value;
+            const resultsPanel = document.getElementById('heatmapResults');
+            const [metricType, metricKey] = selectedMetric.split(':');
+
+            let html = `
+                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Time Slot Performance Heatmap</h3>
+                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time</th>
+                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${SLOT_LABELS.map((label, slotIdx) => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
+                                    ${filteredDays.map(day => {
+                                        let value = 0;
+                                        if (metricType === 'cat') {
+                                            const catData = day.categories && day.categories[metricKey];
+                                            value = catData && catData.slots ? (catData.slots[slotIdx] ?? 0) : 0;
+                                        } else if (metricType === 'trk') {
+                                            const trkSlot = parseInt(metricKey);
+                                            const trkData = day.tracking && day.tracking[trkSlot];
+                                            value = trkData && trkData.slots ? (trkData.slots[slotIdx] ?? 0) : 0;
+                                        }
+                                        const normalized = Math.max(0, Math.min(1, value));
+                                        const hue = normalized * 120;
+                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${value.toFixed(1)}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            resultsPanel.innerHTML = html;
+        }
+
+        function renderCategoryHeatmap() {
+            const resultsPanel = document.getElementById('heatmapResults');
+
+            let html = `
+                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Category Performance Heatmap</h3>
+                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Category</th>
+                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Array.from(enabledCategories).map(cat => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
+                                    ${filteredDays.map(day => {
+                                        const catData = day.categories && day.categories[cat];
+                                        const value = catData ? catData.percentage : 0;
+                                        const normalized = Math.max(0, Math.min(1, value));
+                                        const hue = normalized * 120;
+                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${(value * 100).toFixed(0)}%</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            resultsPanel.innerHTML = html;
+        }
+
+        function renderTimeslotAverageHeatmap() {
+            const resultsPanel = document.getElementById('heatmapResults');
+
+            // Calculate average for each time slot across all filtered days
+            const slotAverages = Array(25).fill(0);
+            const slotCounts = Array(25).fill(0);
+
+            filteredDays.forEach(day => {
+                allCategoryNames.forEach(cat => {
+                    const catData = day.categories && day.categories[cat];
+                    if (catData && catData.slots) {
+                        for (let i = 0; i < 25; i++) {
+                            if (catData.slots[i] != null) {
+                                slotAverages[i] += catData.slots[i];
+                                slotCounts[i]++;
+                            }
+                        }
+                    }
+                });
+            });
+
+            let html = `
+                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Overall Time Slot Performance Average</h3>
+                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">Average performance across all categories and days</p>
+                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time Slot</th>
+                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Average Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${SLOT_LABELS.map((label, idx) => {
+                                const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
+                                const normalized = Math.max(0, Math.min(1, avg));
+                                const hue = normalized * 120;
+                                const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                                const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                return `
+                                    <tr>
+                                        <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
+                                        <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500;">${(avg * 100).toFixed(0)}%</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            resultsPanel.innerHTML = html;
+        }
+
+        function renderDailySummaryHeatmap() {
+            const resultsPanel = document.getElementById('heatmapResults');
+
+            let html = `
+                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Daily Category Performance Summary</h3>
+                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Category</th>
+                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Array.from(enabledCategories).map(cat => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
+                                    ${filteredDays.map(day => {
+                                        const catData = day.categories && day.categories[cat];
+                                        const value = catData ? catData.percentage : 0;
+                                        const normalized = Math.max(0, Math.min(1, value));
+                                        const hue = normalized * 120;
+                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${(value * 100).toFixed(0)}%</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            resultsPanel.innerHTML = html;
         }
 
         function renderComparison() {
