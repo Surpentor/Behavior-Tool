@@ -2464,11 +2464,11 @@
                                                 if (behaviorValue !== null) {
                                                     total += behaviorValue;
                                                     count++;
-                                                    breakdown.push(`${behavior}: ${behaviorValue === 1 ? '✓ Earned' : '✗ Not earned'}`);
+                                                    breakdown.push(`${behavior}: ${behaviorValue}`);
                                                 }
                                             });
                                             value = count > 0 ? total / count : 0;
-                                            tooltip = `${day.date.toLocaleDateString()} - ${label}\\n` + breakdown.join('\\n');
+                                            tooltip = breakdown.join('\\n');
                                         } else if (metricType === 'cat') {
                                             const catData = day.categories && day.categories[metricKey];
                                             value = catData && catData.slots ? (catData.slots[slotIdx] ?? 0) : 0;
