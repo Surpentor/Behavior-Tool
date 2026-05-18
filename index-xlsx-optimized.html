@@ -2454,6 +2454,10 @@
 
                 const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
                 const groupingLabel = grouping === 'by-category' ? ' (by category)' : grouping === 'by-date' ? ' (by date)' : '';
+                const isBarChart = displayType === 'bar' || displayType === 'stacked';
+                const canvasWrapper = isBarChart
+                    ? `<div style="overflow-x: auto; min-height: 450px;"><canvas id="cmp-overlay-canvas" style="min-width: 800px;"></canvas></div>`
+                    : `<canvas id="cmp-overlay-canvas"></canvas>`;
                 container.innerHTML = `
                     <div class="charts-grid">
                         <div class="chart-container" style="grid-column: 1 / -1;">
@@ -2464,7 +2468,7 @@
                                     <button class="chart-print-btn" onclick="printChart('cmp-overlay-canvas')">Print</button>
                                 </div>
                             </div>
-                            <canvas id="cmp-overlay-canvas"></canvas>
+                            ${canvasWrapper}
                         </div>
                     </div>`;
 
