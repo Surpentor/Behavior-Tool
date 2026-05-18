@@ -1895,16 +1895,37 @@
                 return;
             }
 
-            // Create a chart for each BIP goal, showing all days' data
-            let html = '<div class="charts-grid">';
-            const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+            // Create dropdown for goal selection
+            let html = `
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">Select BIP Goals to Display:</label>
+                    <div id="bipGoalSelectors" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            `;
 
             bipGoalNames.forEach(goalName => {
-                const canvasId = 'bip-' + goalName.replace(/\s+/g, '-') + '-canvas';
+                html += `
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" class="bipGoalCheckbox" value="${goalName}" checked onchange="updateBIPGoalsDisplay()">
+                        <span>${goalName}</span>
+                    </label>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Render charts for each day
+            const chartsHtml = '<div class="charts-grid">';
+            days.forEach((day, dayIdx) => {
+                const canvasId = 'bip-day-' + dayIdx + '-canvas';
                 html += `
                     <div class="chart-container">
                         <div class="chart-header">
-                            <h3 class="chart-title">🎯 ${goalName}</h3>
+                            <h3 class="chart-title">🎯 ${day.date.toLocaleDateString()}</h3>
                             <div style="display: flex; gap: 8px;">
                                 <button class="chart-expand-btn" onclick="expandChart('${canvasId}')">⛶</button>
                                 <button class="chart-print-btn" onclick="printChart('${canvasId}')">🖨️ Print</button>
@@ -1914,49 +1935,80 @@
                     </div>`;
             });
             html += '</div>';
-            container.innerHTML = html;
 
-            // Create datasets for each metric type (frequency, duration, intensity)
+            container.innerHTML += chartsHtml + html;
+
+            // Render initial charts
+            updateBIPGoalsDisplay();
+        }
+
+        function updateBIPGoalsDisplay() {
+            const container = document.getElementById('comparisonResults');
+            const indices = Array.from(selectedDatesForComparison).sort((a, b) => a - b);
+            const days = indices.map(i => studentData.days[i]);
+
+            // Get selected goals from checkboxes
+            const selectedGoals = Array.from(document.querySelectorAll('.bipGoalCheckbox:checked')).map(cb => cb.value);
+
+            if (selectedGoals.length === 0) {
+                // Show message if no goals selected
+                const chartsArea = container.querySelector('.charts-grid');
+                if (chartsArea) {
+                    chartsArea.innerHTML = '<div class="empty-message" style="grid-column: 1/-1;">Select at least one BIP goal to display.</div>';
+                }
+                return;
+            }
+
+            const colors = ['#ef4444', '#f59e0b', '#10b981'];
             const metrics = [
                 { key: 'frequency', label: 'Frequency', color: 0 },
                 { key: 'duration', label: 'Duration (min)', color: 1 },
                 { key: 'intensity', label: 'Intensity (1-5)', color: 2 }
             ];
 
-            bipGoalNames.forEach(goalName => {
-                const datasets = metrics.map((metric, idx) => {
-                    const data = days.map(day => {
-                        const goal = day.bipGoals.find(g => g.name === goalName);
-                        return goal ? (goal[metric.key] || 0) : 0;
-                    });
-                    return {
-                        label: metric.label,
-                        data: data,
-                        borderColor: colors[idx % colors.length],
-                        backgroundColor: colors[idx % colors.length] + '20',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    };
-                });
-
-                const labels = days.map(d => d.date.toLocaleDateString());
-                const canvasId = 'bip-' + goalName.replace(/\s+/g, '-') + '-canvas';
+            // Create one chart per day
+            days.forEach((day, dayIdx) => {
+                const canvasId = 'bip-day-' + dayIdx + '-canvas';
                 const canvas = document.getElementById(canvasId);
 
                 if (canvas) {
+                    // Destroy previous chart if exists
+                    if (charts[canvasId]) {
+                        charts[canvasId].destroy();
+                    }
+
+                    // Create datasets for each goal and metric
+                    const datasets = [];
+                    selectedGoals.forEach((goalName, goalIdx) => {
+                        metrics.forEach((metric, metricIdx) => {
+                            const goal = day.bipGoals.find(g => g.name === goalName);
+                            const data = [goal ? (goal[metric.key] || 0) : 0];
+
+                            datasets.push({
+                                label: `${goalName} - ${metric.label}`,
+                                data: data,
+                                borderColor: colors[metricIdx % colors.length],
+                                backgroundColor: colors[metricIdx % colors.length] + '40',
+                                borderWidth: 2
+                            });
+                        });
+                    });
+
+                    const labels = ['Value'];
                     const maxValue = Math.max(...datasets.flatMap(ds => ds.data)) || 1;
+
                     charts[canvasId] = new Chart(canvas.getContext('2d'), {
-                        type: 'line',
+                        type: 'bar',
                         data: { labels, datasets },
                         options: {
+                            indexAxis: 'y',
                             responsive: true,
                             maintainAspectRatio: true,
                             plugins: {
                                 legend: { position: 'top' }
                             },
                             scales: {
-                                y: {
+                                x: {
                                     beginAtZero: true,
                                     max: Math.ceil(maxValue * 1.1 * 10) / 10
                                 }
