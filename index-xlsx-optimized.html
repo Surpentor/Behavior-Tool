@@ -2376,6 +2376,68 @@
             resultsPanel.innerHTML = html;
         }
 
+        function renderHourlySparklines(container, days, metrics) {
+            // Render binary hourly data as sparkline table instead of charts
+            const coreBehaviors = [
+                'Complete Work',
+                'Hands, Body, Objects to self',
+                'Stay in Designated area',
+                'App. language/conversations'
+            ];
+
+            const isCore = metrics.every(m => {
+                const name = m.replace('cat:', '');
+                return coreBehaviors.includes(name);
+            });
+
+            if (!isCore) return null; // Only use sparklines for core behaviors
+
+            let html = `
+                <div style="padding: 24px; background: white; border-radius: 12px;">
+                    <h3 style="margin-bottom: 20px; font-size: 1.05rem; font-weight: 700;">Behavior Patterns Across Time Slots</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 200px; color: #334155;">Behavior / Date</th>
+                                    ${SLOT_LABELS.map(label => `<th style="padding: 8px 6px; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; font-size: 0.75rem; color: #334155; min-width: 20px;">${label.length > 4 ? label.substring(0,2) : label}</th>`).join('')}
+                                    <th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 100px; color: #334155;">% Earned</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${days.flatMap(day =>
+                                    metrics.map(metric => {
+                                        const catName = metric.replace('cat:', '');
+                                        const catData = day.categories && day.categories[catName];
+                                        const slots = catData && catData.slots ? catData.slots : Array(25).fill(0);
+                                        const earned = slots.filter(v => v === 1).length;
+                                        const percentage = Math.round((earned / 25) * 100);
+
+                                        return `
+                                            <tr>
+                                                <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">${day.date.toLocaleDateString()} • ${catName}</td>
+                                                ${slots.map(val => {
+                                                    const bgColor = val === 1 ? '#10b981' : '#ef4444';
+                                                    return `<td style="padding: 4px; border: 1px solid #e2e8f0; background-color: ${bgColor}; min-width: 20px; height: 24px;"></td>`;
+                                                }).join('')}
+                                                <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; color: #334155;">${percentage}%</td>
+                                            </tr>
+                                        `;
+                                    })
+                                ).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #10b981; font-size: 0.85rem; color: #64748b;">
+                        <strong style="color: #10b981;">Green</strong> = Behavior earned • <strong style="color: #ef4444;">Red</strong> = Behavior not earned
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+            return true;
+        }
+
         function renderComparison() {
             const container = document.getElementById('comparisonResults');
             if (!container) return;
@@ -2450,6 +2512,14 @@
                         <p style="font-size: 0.85rem;">Choose at least one metric from the list above to display the comparison chart.</p>
                     </div>`;
                     return;
+                }
+
+                // Special case: use sparklines for Core 4 behaviors
+                if (type === 'hourly') {
+                    const metrics = Array.from(selectedComparisonMetrics);
+                    if (renderHourlySparklines(container, days, metrics)) {
+                        return;
+                    }
                 }
 
                 const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
