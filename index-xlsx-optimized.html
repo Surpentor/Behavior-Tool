@@ -1409,6 +1409,10 @@
                     if (e.target.dataset.tab === 'comparisons') {
                         updateComparisonConfig();
                     }
+                    // Initialize heatmap when heatmap tab is opened
+                    if (e.target.dataset.tab === 'heatmap') {
+                        generateHeatmapView();
+                    }
                 });
             });
 
