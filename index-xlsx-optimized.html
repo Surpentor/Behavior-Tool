@@ -1983,12 +1983,17 @@
                         const data = [];
                         for (let slot = 0; slot < 25; slot++) {
                             let sum = 0;
+                            let hasData = false;
                             selectedGoals.forEach(goalName => {
                                 const goal = day.bipGoals && day.bipGoals.length > 0 ? day.bipGoals.find(g => g.name === goalName) : null;
-                                const slotValue = goal && goal[metric.key] && goal[metric.key][slot] !== undefined ? goal[metric.key][slot] : 0;
-                                sum += slotValue;
+                                if (goal && goal[metric.key] && goal[metric.key][slot] != null) {
+                                    const slotValue = goal[metric.key][slot];
+                                    sum += slotValue;
+                                    hasData = true;
+                                }
                             });
-                            data.push(sum / Math.max(1, selectedGoals.length)); // Average across selected goals
+                            // Only add data if at least one goal has data for this slot
+                            data.push(hasData ? sum / selectedGoals.length : null);
                         }
 
                         datasets.push({
@@ -1998,9 +2003,12 @@
                             backgroundColor: colors[metricIdx] + '40',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            spanGaps: true
                         });
                     });
+
+                    console.log('BIP chart data:', { selectedGoals, datasets, dayIdx });
 
                     const labels = SLOT_LABELS;
                     const maxValue = Math.max(...datasets.flatMap(ds => ds.data)) || 1;
