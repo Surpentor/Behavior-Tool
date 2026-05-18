@@ -163,20 +163,31 @@
         .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 
         .controls-panel {
-            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            padding: 22px;
+            background: white;
+            padding: 28px;
             border-radius: 12px;
-            margin-bottom: 22px;
-            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
         }
 
-        .control-group { margin-bottom: 15px; }
-        .control-group:last-child { margin-bottom: 0; }
+        .control-group {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .control-group:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
         .control-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             font-weight: 600;
-            color: var(--text-primary);
+            color: #1e293b;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
         }
 
         .control-group input[type="date"],
