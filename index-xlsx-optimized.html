@@ -1908,7 +1908,7 @@
 
         function getCategoryComparisonByDate(days) {
             // Group: Categories on X-axis, dates as separate bars for each category
-            const categories = Array.from(enabledCategories);
+            const categories = Array.from(allCategoryNames);
             const axisLabels = categories;
             const datasets = days.map((day, idx) => ({
                 label: day.date.toLocaleDateString(),
@@ -1923,7 +1923,7 @@
 
         function getCategoryComparisonByCategory(days) {
             // Group: Dates on X-axis, categories as separate bars for each date
-            const categories = Array.from(enabledCategories);
+            const categories = Array.from(allCategoryNames);
             const axisLabels = days.map(d => d.date.toLocaleDateString());
             const datasets = categories.map((cat, idx) => ({
                 label: cat,
