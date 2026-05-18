@@ -1890,20 +1890,20 @@
             const container = document.getElementById('comparisonResults');
             const bipGoalNames = allBipGoalNames();
 
-            if (bipGoalNames.length === 0) {
-                container.innerHTML = '<div class="empty-message">No BIP goals available for this student.</div>';
+            if (bipGoalNames.length === 0 || !days || days.length === 0) {
+                container.innerHTML = '<div class="empty-message">No BIP goals available for the selected dates.</div>';
                 return;
             }
 
-            // Create dropdown for goal selection
-            let html = `
+            // Create selector panel
+            let selectorHtml = `
                 <div style="padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 10px; font-weight: 600;">Select BIP Goals to Display:</label>
                     <div id="bipGoalSelectors" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
             `;
 
             bipGoalNames.forEach(goalName => {
-                html += `
+                selectorHtml += `
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" class="bipGoalCheckbox" value="${goalName}" checked onchange="updateBIPGoalsDisplay()">
                         <span>${goalName}</span>
@@ -1911,18 +1911,16 @@
                 `;
             });
 
-            html += `
+            selectorHtml += `
                     </div>
                 </div>
             `;
 
-            container.innerHTML = html;
-
-            // Render charts for each day
-            const chartsHtml = '<div class="charts-grid">';
+            // Create chart containers
+            let chartsHtml = '<div class="charts-grid">';
             days.forEach((day, dayIdx) => {
                 const canvasId = 'bip-day-' + dayIdx + '-canvas';
-                html += `
+                chartsHtml += `
                     <div class="chart-container">
                         <div class="chart-header">
                             <h3 class="chart-title">🎯 ${day.date.toLocaleDateString()}</h3>
@@ -1934,9 +1932,9 @@
                         <canvas id="${canvasId}"></canvas>
                     </div>`;
             });
-            html += '</div>';
+            chartsHtml += '</div>';
 
-            container.innerHTML += chartsHtml + html;
+            container.innerHTML = selectorHtml + chartsHtml;
 
             // Render initial charts
             updateBIPGoalsDisplay();
@@ -1981,8 +1979,9 @@
                     const datasets = [];
                     selectedGoals.forEach((goalName, goalIdx) => {
                         metrics.forEach((metric, metricIdx) => {
-                            const goal = day.bipGoals.find(g => g.name === goalName);
-                            const data = [goal ? (goal[metric.key] || 0) : 0];
+                            const goal = day.bipGoals && day.bipGoals.length > 0 ? day.bipGoals.find(g => g.name === goalName) : null;
+                            const value = goal && goal[metric.key] !== undefined ? goal[metric.key] : 0;
+                            const data = [value];
 
                             datasets.push({
                                 label: `${goalName} - ${metric.label}`,
