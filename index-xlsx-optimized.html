@@ -2300,7 +2300,7 @@
                 Array.from(enabledCategories).forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
-                        const points = catData.slots.reduce((sum, val) => sum + (val ?? 0), 0);
+                        const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
                         maxPoints = Math.max(maxPoints, points);
                     }
                 });
@@ -2326,7 +2326,8 @@
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.85rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
-                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
+                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0) : null;
+                                        if (points === null) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #f5f5f5; color: #999; font-weight: 500; min-width: 90px; font-size: 0.8rem;">—</td>`;
                                         const percentage = Math.round((points / maxPoints) * 100);
                                         const normalized = Math.max(0, Math.min(1, points / maxPoints));
                                         const bgColor = getHeatmapColor(normalized);
@@ -2400,7 +2401,7 @@
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
                         for (let i = 0; i < 25; i++) {
-                            daySlots[i] += catData.slots[i] ?? 0;
+                            daySlots[i] += catData.slots[i] != null ? catData.slots[i] : 0;
                         }
                     }
                 });
@@ -2447,11 +2448,11 @@
                             ${selectedDayIndices.map(dayIdx => {
                                 const day = filteredDays[dayIdx];
                                 const daySlots = Array(25).fill(0);
-                                allCategoryNames.forEach(cat => {
+                                selectedCategories.forEach(cat => {
                                     const catData = day.categories && day.categories[cat];
                                     if (catData && catData.slots) {
                                         for (let i = 0; i < 25; i++) {
-                                            daySlots[i] += catData.slots[i] ?? 0;
+                                            daySlots[i] += catData.slots[i] != null ? catData.slots[i] : 0;
                                         }
                                     }
                                 });
@@ -2496,7 +2497,7 @@
                 Array.from(enabledCategories).forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
-                        const points = catData.slots.reduce((sum, val) => sum + (val ?? 0), 0);
+                        const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
                         maxPoints = Math.max(maxPoints, points);
                     }
                 });
@@ -2522,7 +2523,8 @@
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
-                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
+                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0) : null;
+                                        if (points === null || points === 0) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #f5f5f5; color: #999; font-weight: 500; min-width: 90px; font-size: 0.75rem;">—</td>`;
                                         const percentage = Math.round((points / maxPoints) * 100);
                                         const normalized = Math.max(0, Math.min(1, points / maxPoints));
                                         const bgColor = getHeatmapColor(normalized);
@@ -3021,15 +3023,52 @@
                 body += `<tr>${row}</tr>`;
             });
 
+            // Count non-null occurrences for each metric
+            const counts = {};
+            days.forEach(day => {
+                cats.forEach(c => {
+                    const key = 'cat:' + c;
+                    const cd = day.categories && day.categories[c];
+                    if (cd) {
+                        counts[key] = (counts[key] || 0) + 1;
+                    }
+                });
+                tracking.forEach(t => {
+                    const key = 'trk:' + t.slot;
+                    const td = day.tracking && day.tracking[t.slot];
+                    if (td) {
+                        counts[key] = (counts[key] || 0) + 1;
+                    }
+                });
+                bipNames.forEach(name => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    if (g) {
+                        counts['bipF:' + name] = (counts['bipF:' + name] || 0) + 1;
+                        counts['bipD:' + name] = (counts['bipD:' + name] || 0) + 1;
+                        counts['bipI:' + name] = (counts['bipI:' + name] || 0) + 1;
+                    }
+                });
+            });
+
             // Averages row
             const n = days.length;
             let avg = `<td class="date-col">Average (${n} days)</td>`;
-            cats.forEach(c => avg += `<td>${fmt((sums['cat:' + c] || 0) / n)}</td>`);
-            tracking.forEach(t => avg += `<td>${fmt((sums['trk:' + t.slot] || 0) / n)}</td>`);
+            cats.forEach(c => {
+                const key = 'cat:' + c;
+                const cnt = counts[key] || 0;
+                avg += `<td>${cnt > 0 ? fmt((sums[key] || 0) / cnt) : '—'}</td>`;
+            });
+            tracking.forEach(t => {
+                const key = 'trk:' + t.slot;
+                const cnt = counts[key] || 0;
+                avg += `<td>${cnt > 0 ? fmt((sums[key] || 0) / cnt) : '—'}</td>`;
+            });
             bipNames.forEach(name => {
-                avg += `<td>${fmt((sums['bipF:' + name] || 0) / n)}</td>`;
-                avg += `<td>${fmt((sums['bipD:' + name] || 0) / n)}</td>`;
-                avg += `<td>${fmt((sums['bipI:' + name] || 0) / n)}</td>`;
+                const kf = 'bipF:' + name, kd = 'bipD:' + name, ki = 'bipI:' + name;
+                const cntf = counts[kf] || 0, cntd = counts[kd] || 0, cnti = counts[ki] || 0;
+                avg += `<td>${cntf > 0 ? fmt((sums[kf] || 0) / cntf) : '—'}</td>`;
+                avg += `<td>${cntd > 0 ? fmt((sums[kd] || 0) / cntd) : '—'}</td>`;
+                avg += `<td>${cnti > 0 ? fmt((sums[ki] || 0) / cnti) : '—'}</td>`;
             });
 
             table.innerHTML =
@@ -3499,25 +3538,31 @@
                 return;
             }
 
-            // Per-day overall average (mean of all category percentages)
+            // Per-day overall average (mean of all category percentages with data)
             const dayAverages = days.map(day => {
                 const cats = Object.values(day.categories || {});
-                if (cats.length === 0) return 0;
-                return cats.reduce((s, c) => s + c.percentage, 0) / cats.length;
+                const catsWithData = cats.filter(c => c && c.percentage != null);
+                if (catsWithData.length === 0) return null;
+                return catsWithData.reduce((s, c) => s + c.percentage, 0) / catsWithData.length;
             });
-            const overallAvg = dayAverages.reduce((s, v) => s + v, 0) / dayAverages.length;
+            const daysWithData = dayAverages.filter(v => v != null);
+            const overallAvg = daysWithData.length > 0 ? daysWithData.reduce((s, v) => s + v, 0) / daysWithData.length : 0;
 
-            // Best / worst day
+            // Best / worst day (only from days with data)
             let bestIdx = 0, worstIdx = 0;
+            let bestVal = -Infinity, worstVal = Infinity;
             dayAverages.forEach((v, i) => {
-                if (v > dayAverages[bestIdx]) bestIdx = i;
-                if (v < dayAverages[worstIdx]) worstIdx = i;
+                if (v != null) {
+                    if (v > bestVal) { bestVal = v; bestIdx = i; }
+                    if (v < worstVal) { worstVal = v; worstIdx = i; }
+                }
             });
 
-            // Overall trend: first half vs second half
-            const half = Math.floor(dayAverages.length / 2);
-            const firstHalfAvg = half > 0 ? dayAverages.slice(0, half).reduce((s, v) => s + v, 0) / half : overallAvg;
-            const secondHalfAvg = half > 0 ? dayAverages.slice(half).reduce((s, v) => s + v, 0) / (dayAverages.length - half) : overallAvg;
+            // Overall trend: first half vs second half (only using days with data)
+            const fhDays = daysWithData.slice(0, Math.floor(daysWithData.length / 2));
+            const shDays = daysWithData.slice(Math.floor(daysWithData.length / 2));
+            const firstHalfAvg = fhDays.length > 0 ? fhDays.reduce((s, v) => s + v, 0) / fhDays.length : overallAvg;
+            const secondHalfAvg = shDays.length > 0 ? shDays.reduce((s, v) => s + v, 0) / shDays.length : overallAvg;
             const trendDiff = secondHalfAvg - firstHalfAvg;
             const overallTrendClass = trendDiff > 2 ? 'trend-up' : trendDiff < -2 ? 'trend-down' : 'trend-flat';
             const overallTrendLabel = trendDiff > 2 ? '↑ Improving' : trendDiff < -2 ? '↓ Declining' : '→ Stable';
@@ -3535,12 +3580,15 @@
             }
             const bestSlotIdx = slotAvgs.indexOf(Math.max(...slotAvgs));
 
-            // Per-category averages and trends
+            // Per-category averages and trends (only counting days with data)
             const catInsights = allCategoryNames.map(cat => {
-                const vals = days.map(day => day.categories && day.categories[cat] ? day.categories[cat].percentage : 0);
+                const vals = days.map(day => day.categories && day.categories[cat] ? day.categories[cat].percentage : null).filter(v => v != null);
+                if (vals.length === 0) return { name: cat, avg: 0, trendClass: 'trend-flat', trendLabel: '— No data' };
                 const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-                const fh = half > 0 ? vals.slice(0, half).reduce((s, v) => s + v, 0) / half : avg;
-                const sh = half > 0 ? vals.slice(half).reduce((s, v) => s + v, 0) / (vals.length - half) : avg;
+                const fhVals = vals.slice(0, Math.floor(vals.length / 2));
+                const shVals = vals.slice(Math.floor(vals.length / 2));
+                const fh = fhVals.length > 0 ? fhVals.reduce((s, v) => s + v, 0) / fhVals.length : avg;
+                const sh = shVals.length > 0 ? shVals.reduce((s, v) => s + v, 0) / shVals.length : avg;
                 const diff = sh - fh;
                 return {
                     name: cat, avg,
@@ -3549,12 +3597,15 @@
                 };
             });
 
-            // BIP goal trends (lower frequency = better)
+            // BIP goal trends (lower frequency = better, only counting days with data)
             const bipInsights = allBipGoalNames().map(name => {
-                const vals = days.map(day => { const g = day.bipGoals.find(x => x.name === name); return g ? g.frequency : 0; });
+                const vals = days.map(day => { const g = day.bipGoals.find(x => x.name === name); return g ? g.frequency : null; }).filter(v => v != null);
+                if (vals.length === 0) return { name, avg: 0, trendClass: 'trend-flat', trendLabel: '— No data' };
                 const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-                const fh = half > 0 ? vals.slice(0, half).reduce((s, v) => s + v, 0) / half : avg;
-                const sh = half > 0 ? vals.slice(half).reduce((s, v) => s + v, 0) / (vals.length - half) : avg;
+                const fhVals = vals.slice(0, Math.floor(vals.length / 2));
+                const shVals = vals.slice(Math.floor(vals.length / 2));
+                const fh = fhVals.length > 0 ? fhVals.reduce((s, v) => s + v, 0) / fhVals.length : avg;
+                const sh = shVals.length > 0 ? shVals.reduce((s, v) => s + v, 0) / shVals.length : avg;
                 const diff = sh - fh;
                 return {
                     name, avg: Math.round(avg),
