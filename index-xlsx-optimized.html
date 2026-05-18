@@ -1958,12 +1958,7 @@
                 return;
             }
 
-            const colors = ['#ef4444', '#f59e0b', '#10b981'];
-            const metrics = [
-                { key: 'frequency', label: 'Frequency', color: 0 },
-                { key: 'duration', label: 'Duration (min)', color: 1 },
-                { key: 'intensity', label: 'Intensity (1-5)', color: 2 }
-            ];
+            const colors = ['#3b82f6', '#ef4444', '#f59e0b'];
 
             // Create one chart per day
             days.forEach((day, dayIdx) => {
@@ -1976,39 +1971,51 @@
                         charts[canvasId].destroy();
                     }
 
-                    // Create datasets for each goal and metric
+                    // Create datasets for frequency, duration, intensity across all goals
                     const datasets = [];
-                    selectedGoals.forEach((goalName, goalIdx) => {
-                        metrics.forEach((metric, metricIdx) => {
-                            const goal = day.bipGoals && day.bipGoals.length > 0 ? day.bipGoals.find(g => g.name === goalName) : null;
-                            const value = goal && goal[metric.key] !== undefined ? goal[metric.key] : 0;
-                            const data = [value];
+                    const metrics = [
+                        { key: 'freqSlots', label: 'Frequency', color: 0 },
+                        { key: 'durSlots', label: 'Duration (min)', color: 1 },
+                        { key: 'intenSlots', label: 'Intensity (1-5)', color: 2 }
+                    ];
 
-                            datasets.push({
-                                label: `${goalName} - ${metric.label}`,
-                                data: data,
-                                borderColor: colors[metricIdx % colors.length],
-                                backgroundColor: colors[metricIdx % colors.length] + '40',
-                                borderWidth: 2
+                    metrics.forEach((metric, metricIdx) => {
+                        const data = [];
+                        for (let slot = 0; slot < 25; slot++) {
+                            let sum = 0;
+                            selectedGoals.forEach(goalName => {
+                                const goal = day.bipGoals && day.bipGoals.length > 0 ? day.bipGoals.find(g => g.name === goalName) : null;
+                                const slotValue = goal && goal[metric.key] && goal[metric.key][slot] !== undefined ? goal[metric.key][slot] : 0;
+                                sum += slotValue;
                             });
+                            data.push(sum / Math.max(1, selectedGoals.length)); // Average across selected goals
+                        }
+
+                        datasets.push({
+                            label: metric.label,
+                            data: data,
+                            borderColor: colors[metricIdx],
+                            backgroundColor: colors[metricIdx] + '40',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
                         });
                     });
 
-                    const labels = ['Value'];
+                    const labels = SLOT_LABELS;
                     const maxValue = Math.max(...datasets.flatMap(ds => ds.data)) || 1;
 
                     charts[canvasId] = new Chart(canvas.getContext('2d'), {
-                        type: 'bar',
+                        type: 'line',
                         data: { labels, datasets },
                         options: {
-                            indexAxis: 'y',
                             responsive: true,
                             maintainAspectRatio: true,
                             plugins: {
                                 legend: { position: 'top' }
                             },
                             scales: {
-                                x: {
+                                y: {
                                     beginAtZero: true,
                                     max: Math.ceil(maxValue * 1.1 * 10) / 10
                                 }
