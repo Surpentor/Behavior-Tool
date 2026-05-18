@@ -2043,7 +2043,7 @@
                     console.log('BIP chart data:', { selectedGoals, datasets, dayIdx });
 
                     const labels = SLOT_LABELS;
-                    const maxValue = Math.max(...datasets.flatMap(ds => ds.data)) || 1;
+                    const yRange = calcYAxisRange(datasets, { integerOnly: true });
 
                     charts[canvasId] = new Chart(canvas.getContext('2d'), {
                         type: 'line',
@@ -2056,8 +2056,8 @@
                             },
                             scales: {
                                 y: {
-                                    beginAtZero: true,
-                                    max: Math.ceil(maxValue * 1.1 * 10) / 10
+                                    min: yRange.min,
+                                    max: yRange.max
                                 }
                             }
                         }
@@ -2108,7 +2108,6 @@
                 const canvas = document.getElementById(canvasId);
 
                 if (canvas) {
-                    const maxValue = Math.max(...data) || 1;
                     const displayType = document.getElementById('chartDisplayType')?.value || 'bar';
                     const chartType = displayType === 'area' || displayType === 'line' ? 'line' : 'bar';
                     const dataset = {
@@ -2125,6 +2124,8 @@
                         dataset.tension = 0.4;
                     }
 
+                    const yRange = calcYAxisRange([dataset], { forceZeroMin: chartType === 'bar' });
+
                     charts[canvasId] = new Chart(canvas.getContext('2d'), {
                         type: chartType,
                         data: { labels, datasets: [dataset] },
@@ -2136,8 +2137,8 @@
                             },
                             scales: {
                                 y: {
-                                    beginAtZero: true,
-                                    max: Math.ceil(maxValue * 1.1 * 10) / 10
+                                    min: yRange.min,
+                                    max: yRange.max
                                 }
                             }
                         }
@@ -2233,6 +2234,55 @@
             // Add 10% headroom
             if (maxValue <= 1) return 1.1;
             return Math.ceil(maxValue * 1.1 * 10) / 10;
+        }
+
+        // Smart y-axis range calculator: trims bottom negative space and adds top headroom
+        function calcYAxisRange(datasets, options = {}) {
+            const {
+                isPercentage = false,
+                forceZeroMin = false,
+                absoluteMax = isPercentage ? 100 : Infinity,
+                integerOnly = false
+            } = options;
+
+            let minVal = Infinity, maxVal = -Infinity, hasData = false;
+            (datasets || []).forEach(ds => {
+                if (ds && ds.data && Array.isArray(ds.data)) {
+                    ds.data.forEach(val => {
+                        if (typeof val === 'number' && !isNaN(val)) {
+                            hasData = true;
+                            if (val < minVal) minVal = val;
+                            if (val > maxVal) maxVal = val;
+                        }
+                    });
+                }
+            });
+
+            if (!hasData) {
+                return { min: 0, max: isPercentage ? 100 : 1 };
+            }
+
+            const range = Math.max(1, maxVal - minVal);
+            const headroom = Math.max(range * 0.15, integerOnly ? 1 : 0.5);
+            const bottomPad = forceZeroMin ? 0 : Math.max(range * 0.15, integerOnly ? 1 : 0.5);
+
+            let min = forceZeroMin ? 0 : Math.max(0, minVal - bottomPad);
+            let max = Math.min(absoluteMax, maxVal + headroom);
+
+            if (isPercentage) {
+                // Round to nice 5% increments
+                min = Math.max(0, Math.floor(min / 5) * 5);
+                max = Math.min(100, Math.ceil(max / 5) * 5);
+            } else if (integerOnly) {
+                min = Math.max(0, Math.floor(min));
+                max = Math.ceil(max);
+            } else {
+                min = Math.max(0, Math.floor(min * 10) / 10);
+                max = Math.ceil(max * 10) / 10;
+            }
+
+            if (min >= max) min = Math.max(0, max - 1);
+            return { min, max };
         }
 
         function renderHeatmap(container, datasets, axisLabels, days, type) {
@@ -3090,7 +3140,7 @@
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: true } }
+                scales: { y: {} }
             };
 
             // Special case: hourly with no metrics selected
@@ -3150,7 +3200,9 @@
                 }
 
                 const chartOptions = JSON.parse(JSON.stringify(baseOptions));
-                chartOptions.scales.y.max = getYAxisMax(datasets);
+                const yRange = calcYAxisRange(datasets, { forceZeroMin: chartType === 'bar' });
+                chartOptions.scales.y.min = yRange.min;
+                chartOptions.scales.y.max = yRange.max;
 
                 // Apply display type specific options
                 if (displayType === 'stacked') {
@@ -3583,13 +3635,9 @@
                 };
             });
 
-            // Calculate max value with 110% buffer
-            let maxValue = 0;
-            datasets.forEach(ds => {
-                const dsMax = Math.max(...ds.data);
-                if (dsMax > maxValue) maxValue = dsMax;
+            const yRange = calcYAxisRange(datasets, {
+                isPercentage: metric === 'percentage'
             });
-            const yMax = Math.ceil(maxValue * 1.1 * 10) / 10 || (metric === 'percentage' ? 100 : 25);
 
             charts.categoryTrend = new Chart(canvas.getContext('2d'), {
                 type: 'line',
@@ -3601,7 +3649,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, max: yMax } }
+                    scales: { y: { min: yRange.min, max: yRange.max } }
                 }
             });
         }
@@ -3633,20 +3681,26 @@
                 return count > 0 ? sum / count : 0;
             });
 
+            const perfDatasets = [{
+                label: metric === 'percentage' ? 'Average %' : 'Average Points',
+                data: avgData,
+                backgroundColor: colors.slice(0, categories.length)
+            }];
+            const yRange = calcYAxisRange(perfDatasets, {
+                isPercentage: metric === 'percentage',
+                forceZeroMin: true
+            });
+
             charts.categoryPerformance = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: categories,
-                    datasets: [{
-                        label: metric === 'percentage' ? 'Average %' : 'Average Points',
-                        data: avgData,
-                        backgroundColor: colors.slice(0, categories.length)
-                    }]
+                    datasets: perfDatasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    scales: { y: { beginAtZero: true, max: metric === 'percentage' ? 100 : 25 } }
+                    scales: { y: { min: yRange.min, max: yRange.max } }
                 }
             });
         }
@@ -3731,6 +3785,8 @@
             const chartTitle = document.querySelector('#timeofday .chart-title');
             if (chartTitle) chartTitle.textContent = `⏰ Time-of-Day Patterns${label ? ' — ' + label : ''}`;
 
+            const yRange = calcYAxisRange(datasets, { forceZeroMin: true });
+
             charts.timeOfDay = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: SLOT_LABELS, datasets },
@@ -3740,7 +3796,8 @@
                     plugins: { legend: { position: 'top' } },
                     scales: {
                         y: {
-                            beginAtZero: true,
+                            min: yRange.min,
+                            max: yRange.max,
                             title: { display: !!yAxisLabel, text: yAxisLabel || '', color: '#64748b', font: { size: 12 } }
                         }
                     }
@@ -3788,6 +3845,8 @@
                 };
             });
 
+            const yRange = calcYAxisRange(datasets, { integerOnly: true });
+
             charts.bipGoals = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
@@ -3798,7 +3857,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    scales: { y: { min: yRange.min, max: yRange.max, ticks: { stepSize: 1 } } }
                 }
             });
         }
@@ -3820,25 +3879,27 @@
                     const t = day.tracking && day.tracking[meta.slot];
                     return t ? (t.value || 0) : 0;
                 });
+                const trackingDataset = {
+                    label: meta.label,
+                    data,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: '#8b5cf620',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                };
+                const yRange = calcYAxisRange([trackingDataset]);
                 charts[key] = new Chart(canvas.getContext('2d'), {
                     type: 'line',
                     data: {
                         labels,
-                        datasets: [{
-                            label: meta.label,
-                            data,
-                            borderColor: '#8b5cf6',
-                            backgroundColor: '#8b5cf620',
-                            tension: 0.4,
-                            fill: true,
-                            borderWidth: 2
-                        }]
+                        datasets: [trackingDataset]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: { legend: { position: 'top' } },
-                        scales: { y: { beginAtZero: true } }
+                        scales: { y: { min: yRange.min, max: yRange.max } }
                     }
                 });
             });
@@ -3861,21 +3922,23 @@
                     inten.push(goal ? Math.round(goal.intensity) : 0);
                 });
 
+                const bipDatasets = [
+                    { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false, borderWidth: 2 },
+                    { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false, borderWidth: 2 },
+                    { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false, borderWidth: 2 }
+                ];
+                const yRange = calcYAxisRange(bipDatasets, { integerOnly: true });
                 charts[key] = new Chart(canvas.getContext('2d'), {
                     type: 'line',
                     data: {
                         labels,
-                        datasets: [
-                            { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false, borderWidth: 2 },
-                            { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false, borderWidth: 2 },
-                            { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false, borderWidth: 2 }
-                        ]
+                        datasets: bipDatasets
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: { legend: { position: 'top' } },
-                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                        scales: { y: { min: yRange.min, max: yRange.max, ticks: { stepSize: 1 } } }
                     }
                 });
             });
@@ -4237,16 +4300,22 @@
                         return '#ef4444';
                     };
 
-                    // Smooth vertical gradient: green at top (100%), red at bottom (0%)
+                    // Calculate dynamic y-axis range based on data
+                    const yRange = calcYAxisRange([{ data: overallAverages }], { isPercentage: true });
+
+                    // Smooth vertical gradient mapped to data range, not full 0-100
                     const createGradient = (ctx, chartArea) => {
                         const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                        gradient.addColorStop(0.00, '#10b981'); // 100% - Green
-                        gradient.addColorStop(0.20, '#10b981'); // 80%  - Green
-                        gradient.addColorStop(0.30, '#34d399'); // 70%  - Light green
-                        gradient.addColorStop(0.40, '#fbbf24'); // 60%  - Yellow
-                        gradient.addColorStop(0.50, '#fb923c'); // 50%  - Orange
-                        gradient.addColorStop(0.60, '#f97316'); // 40%  - Dark orange
-                        gradient.addColorStop(1.00, '#ef4444'); // 0%   - Red
+                        // Map gradient stops to actual visible y-range
+                        const range = yRange.max - yRange.min;
+                        const valueToPos = v => Math.max(0, Math.min(1, (yRange.max - v) / range));
+                        gradient.addColorStop(valueToPos(yRange.max), '#10b981');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 80)), '#10b981');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 70)), '#34d399');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 60)), '#fbbf24');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 50)), '#fb923c');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 40)), '#f97316');
+                        gradient.addColorStop(valueToPos(yRange.min), '#ef4444');
                         return gradient;
                     };
 
@@ -4297,8 +4366,8 @@
                             },
                             scales: {
                                 y: {
-                                    beginAtZero: true,
-                                    max: 100,
+                                    min: yRange.min,
+                                    max: yRange.max,
                                     ticks: {
                                         callback: function(value) {
                                             return value + '%';
