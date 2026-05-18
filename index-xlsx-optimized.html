@@ -2378,7 +2378,7 @@
             const isCombined = metricType === 'combined';
 
             let html = `
-                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Time Slot Performance Heatmap</h3>
                         <div style="display: flex; gap: 8px;">
@@ -2386,6 +2386,7 @@
                             <button class="chart-print-btn" onclick="printHeatmap('heatmap-timeslot')">🖨️ Print</button>
                         </div>
                     </div>
+                    <div style="overflow-x: auto;">
                     <table id="heatmap-timeslot" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2429,6 +2430,7 @@
                             `).join('')}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             `;
 
@@ -2453,7 +2455,7 @@
             maxPoints = Math.max(maxPoints, 1);
 
             let html = `
-                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <div style="margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
@@ -2466,6 +2468,7 @@
                             </div>
                         </div>
                     </div>
+                    <div style="overflow-x: auto;">
                     <table id="heatmap-category" style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2517,6 +2520,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             `;
 
@@ -2613,7 +2617,7 @@
                 : `Time Slot Performance (${selectedDayIndices.length} days)`;
 
             let html = `
-                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">${title}</h3>
                         <div style="display: flex; gap: 8px;">
@@ -2621,6 +2625,7 @@
                             <button class="chart-print-btn" onclick="printHeatmap('heatmap-timeslot-avg')">🖨️ Print</button>
                         </div>
                     </div>
+                    <div style="overflow-x: auto;">
                     <table id="heatmap-timeslot-avg" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2665,6 +2670,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             `;
 
@@ -2689,7 +2695,7 @@
             maxPoints = Math.max(maxPoints, 1);
 
             let html = `
-                <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <div style="margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
@@ -2702,6 +2708,7 @@
                             </div>
                         </div>
                     </div>
+                    <div style="overflow-x: auto;">
                     <table id="heatmap-daily" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
