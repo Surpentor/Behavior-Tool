@@ -4226,7 +4226,7 @@
                         return catsWithData.reduce((s, c) => s + c.percentage, 0) / catsWithData.length;
                     });
 
-                    // Create color array based on values (red to green gradient)
+                    // Create color function based on values (red to green gradient)
                     const getColorForValue = (v) => {
                         if (v == null) return '#cccccc';
                         if (v >= 80) return '#10b981';      // Green
@@ -4237,30 +4237,64 @@
                         return '#ef4444';                    // Red
                     };
 
-                    const borderColors = overallAverages.map(v => getColorForValue(v));
-                    const pointBackgroundColors = overallAverages.map(v => {
-                        const color = getColorForValue(v);
-                        return v == null ? '#ddd' : color;
+                    // Create multiple datasets - one for each line segment with its own color
+                    const datasets = [];
+                    for (let i = 0; i < overallAverages.length - 1; i++) {
+                        const currVal = overallAverages[i];
+                        const nextVal = overallAverages[i + 1];
+
+                        // Skip if both are null
+                        if (currVal == null && nextVal == null) continue;
+
+                        // Determine color based on average of the two points
+                        let segmentColor;
+                        if (currVal != null && nextVal != null) {
+                            segmentColor = getColorForValue((currVal + nextVal) / 2);
+                        } else if (currVal != null) {
+                            segmentColor = getColorForValue(currVal);
+                        } else {
+                            segmentColor = getColorForValue(nextVal);
+                        }
+
+                        const data = new Array(overallAverages.length).fill(null);
+                        data[i] = currVal;
+                        data[i + 1] = nextVal;
+
+                        datasets.push({
+                            label: i === 0 ? 'Overall Average %' : '',
+                            data: data,
+                            borderColor: segmentColor,
+                            backgroundColor: 'transparent',
+                            borderWidth: 4,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            borderCapStyle: 'round',
+                            borderJoinStyle: 'round'
+                        });
+                    }
+
+                    // Add a separate dataset just for showing the points
+                    datasets.push({
+                        label: 'Overall Average %',
+                        data: overallAverages,
+                        pointRadius: 5,
+                        pointBackgroundColor: overallAverages.map(v => {
+                            const color = getColorForValue(v);
+                            return v == null ? '#ddd' : color;
+                        }),
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        showLine: false,
+                        fill: false
                     });
 
                     charts.insightsAverageChart = new Chart(canvas.getContext('2d'), {
                         type: 'line',
                         data: {
                             labels: labels,
-                            datasets: [{
-                                label: 'Overall Average %',
-                                data: overallAverages,
-                                borderColor: borderColors,
-                                backgroundColor: 'transparent',
-                                borderWidth: 3,
-                                fill: false,
-                                tension: 0.4,
-                                spanGaps: true,
-                                pointRadius: 5,
-                                pointBackgroundColor: pointBackgroundColors,
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2
-                            }]
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
@@ -4274,8 +4308,11 @@
                                 tooltip: {
                                     callbacks: {
                                         label: function(context) {
-                                            const val = context.parsed.y;
-                                            return val != null ? Math.round(val * 10) / 10 + '%' : 'No data';
+                                            if (context.datasetIndex === datasets.length - 1) {
+                                                const val = context.parsed.y;
+                                                return val != null ? Math.round(val * 10) / 10 + '%' : 'No data';
+                                            }
+                                            return '';
                                         }
                                     }
                                 }
