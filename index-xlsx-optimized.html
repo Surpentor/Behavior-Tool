@@ -2220,14 +2220,14 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem;">Time Slot</th>
+                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Time Slot</th>
                                 ${filteredDays.map(d => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${SLOT_LABELS.map((label, slotIdx) => `
                                 <tr>
-                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; background: white; color: #334155; font-size: 0.75rem;">${label}</td>
+                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.75rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${label}</td>
                                     ${filteredDays.map(day => {
                                         let value = 0;
                                         if (metricType === 'cat') {
@@ -2279,14 +2279,14 @@
                     <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.85rem;">Category</th>
+                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.85rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Category</th>
                                 ${filteredDays.map(d => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; background: white; color: #334155; font-size: 0.85rem;">${cat}</td>
+                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.85rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
@@ -2402,7 +2402,7 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem;">Day / Metric</th>
+                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Day / Metric</th>
                                 ${SLOT_LABELS.map(label => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${label}</th>`).join('')}
                             </tr>
                         </thead>
@@ -2420,7 +2420,7 @@
                                 });
                                 return `
                                     <tr>
-                                        <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; background: white; color: #334155; font-size: 0.8rem;">${day.date.toLocaleDateString()}</td>
+                                        <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()}</td>
                                         ${SLOT_LABELS.map((label, idx) => {
                                             const val = daySlots[idx];
                                             const normalized = Math.max(0, Math.min(1, val / globalMaxVal));
@@ -2432,7 +2432,7 @@
                                 `;
                             }).join('')}
                             <tr style="border-top: 2px solid #cbd5e1;">
-                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; background: #f1f5f9; position: sticky; left: 0; z-index: 5; background: white; color: #334155; font-size: 0.8rem;">Average</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Average</td>
                                 ${SLOT_LABELS.map((label, idx) => {
                                     const avg = avgCounts[idx] > 0 ? avgSlots[idx] / avgCounts[idx] : 0;
                                     const normalized = Math.max(0, Math.min(1, avg / globalMaxVal));
@@ -2475,14 +2475,14 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem;">Category</th>
+                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 130px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Category</th>
                                 ${filteredDays.map(d => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; background: white; color: #334155; font-size: 0.8rem;">${cat}</td>
+                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
