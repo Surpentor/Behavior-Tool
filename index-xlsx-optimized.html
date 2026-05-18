@@ -4247,6 +4247,18 @@
 
             html += '</div>';
 
+            // Add chart container for category averages
+            html += `<div style="padding: 20px; background: white; border-radius: 8px; margin-top: 28px; margin-bottom: 28px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">Category Averages</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="chart-expand-btn" onclick="expandChart('insightsAverageChart')">⛶</button>
+                        <button class="chart-print-btn" onclick="printChart('insightsAverageChart')">🖨️ Print</button>
+                    </div>
+                </div>
+                <canvas id="insightsAverageChart"></canvas>
+            </div>`;
+
             // Per-category section
             if (catInsights.length > 0) {
                 html += '<p class="insights-section-title" style="margin-top: 28px;">📈 Category Performance</p>';
@@ -4318,6 +4330,63 @@
             }
 
             container.innerHTML = html;
+
+            // Render the category averages chart
+            setTimeout(() => {
+                const canvas = document.getElementById('insightsAverageChart');
+                if (canvas) {
+                    if (charts.insightsAverageChart) charts.insightsAverageChart.destroy();
+
+                    const categories = catInsights.map(ci => ci.name);
+                    const averages = catInsights.map(ci => ci.avg);
+                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+                    charts.insightsAverageChart = new Chart(canvas.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: categories,
+                            datasets: [{
+                                label: 'Average %',
+                                data: averages,
+                                backgroundColor: averages.map(v => {
+                                    if (v >= 80) return '#10b981';
+                                    if (v >= 60) return '#fbbf24';
+                                    if (v >= 40) return '#f97316';
+                                    return '#ef4444';
+                                }),
+                                borderColor: '#334155',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'x',
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return Math.round(context.parsed.y * 10) / 10 + '%';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
         }
 
         function printFullReport() {
