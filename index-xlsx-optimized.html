@@ -3293,22 +3293,26 @@
                 let row = `<td class="date-col">${day.date.toLocaleDateString()}</td>`;
                 cats.forEach(c => {
                     const cd = day.categories && day.categories[c];
-                    const v = cd ? (metric === 'percentage' ? cd.percentage : cd.total) : 0;
-                    sums['cat:' + c] = (sums['cat:' + c] || 0) + v;
-                    row += `<td>${cd ? fmt(v) : '—'}</td>`;
+                    const hasData = cd && cd.presentSlots > 0;
+                    const v = hasData ? (metric === 'percentage' ? cd.percentage : cd.total) : 0;
+                    if (hasData) sums['cat:' + c] = (sums['cat:' + c] || 0) + v;
+                    row += `<td>${hasData ? fmt(v) : '—'}</td>`;
                 });
                 tracking.forEach(t => {
                     const td = day.tracking && day.tracking[t.slot];
-                    const v = td ? (td.value || 0) : 0;
-                    sums['trk:' + t.slot] = (sums['trk:' + t.slot] || 0) + v;
-                    row += `<td>${fmt(v)}</td>`;
+                    const hasData = td && td.presentSlots > 0;
+                    const v = hasData ? (td.value || 0) : 0;
+                    if (hasData) sums['trk:' + t.slot] = (sums['trk:' + t.slot] || 0) + v;
+                    row += `<td>${hasData ? fmt(v) : '—'}</td>`;
                 });
                 bipNames.forEach(name => {
                     const g = day.bipGoals.find(x => x.name === name);
                     const f = g ? g.frequency : 0, d = g ? g.duration : 0, it = g ? g.intensity : 0;
-                    sums['bipF:' + name] = (sums['bipF:' + name] || 0) + f;
-                    sums['bipD:' + name] = (sums['bipD:' + name] || 0) + d;
-                    sums['bipI:' + name] = (sums['bipI:' + name] || 0) + it;
+                    if (g) {
+                        sums['bipF:' + name] = (sums['bipF:' + name] || 0) + f;
+                        sums['bipD:' + name] = (sums['bipD:' + name] || 0) + d;
+                        sums['bipI:' + name] = (sums['bipI:' + name] || 0) + it;
+                    }
                     row += `<td>${fmt(f)}</td><td>${fmt(d)}</td><td>${fmt(it)}</td>`;
                 });
                 body += `<tr>${row}</tr>`;
@@ -3320,14 +3324,14 @@
                 cats.forEach(c => {
                     const key = 'cat:' + c;
                     const cd = day.categories && day.categories[c];
-                    if (cd) {
+                    if (cd && cd.presentSlots > 0) {
                         counts[key] = (counts[key] || 0) + 1;
                     }
                 });
                 tracking.forEach(t => {
                     const key = 'trk:' + t.slot;
                     const td = day.tracking && day.tracking[t.slot];
-                    if (td) {
+                    if (td && td.presentSlots > 0) {
                         counts[key] = (counts[key] || 0) + 1;
                     }
                 });
