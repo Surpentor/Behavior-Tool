@@ -2400,18 +2400,23 @@
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.75rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()}</td>
                                     ${SLOT_LABELS.map((label, slotIdx) => {
                                         let value = 0;
+                                        let tooltip = '';
                                         if (metricType === 'combined') {
                                             // Average all Core 4 behaviors
                                             let total = 0;
                                             let count = 0;
+                                            let breakdown = [];
                                             coreBehaviors.forEach(behavior => {
                                                 const catData = day.categories && day.categories[behavior];
-                                                if (catData && catData.slots && catData.slots[slotIdx] !== undefined) {
-                                                    total += catData.slots[slotIdx];
+                                                const behaviorValue = catData && catData.slots && catData.slots[slotIdx] !== undefined ? catData.slots[slotIdx] : null;
+                                                if (behaviorValue !== null) {
+                                                    total += behaviorValue;
                                                     count++;
+                                                    breakdown.push(`${behavior}: ${behaviorValue === 1 ? '✓ Earned' : '✗ Not earned'}`);
                                                 }
                                             });
                                             value = count > 0 ? total / count : 0;
+                                            tooltip = `${day.date.toLocaleDateString()} - ${label}\\n` + breakdown.join('\\n');
                                         } else if (metricType === 'cat') {
                                             const catData = day.categories && day.categories[metricKey];
                                             value = catData && catData.slots ? (catData.slots[slotIdx] ?? 0) : 0;
@@ -2424,7 +2429,8 @@
                                         const bgColor = getHeatmapColor(normalized);
                                         const textColor = normalized > 0.65 ? 'white' : '#1e293b';
                                         const displayValue = isCombined ? value.toFixed(1) : '';
-                                        return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 90px; font-size: 0.75rem;">${displayValue}</td>`;
+                                        const tooltipAttr = isCombined && tooltip ? ` title="${tooltip}"` : '';
+                                        return `<td${tooltipAttr} style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 90px; font-size: 0.75rem; cursor: ${isCombined ? 'help' : 'default'};">${displayValue}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
