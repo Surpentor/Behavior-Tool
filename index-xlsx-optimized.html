@@ -924,6 +924,18 @@
                             The bottom row shows averages across the shown days.
                         </p>
                     </div>
+
+                    <div style="padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px;">
+                        <div class="chart-header">
+                            <h3 class="chart-title">📊 Overall Average by Category</h3>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="chart-expand-btn" onclick="expandChart('overallAverageChart')">⛶</button>
+                                <button class="chart-print-btn" onclick="printChart('overallAverageChart')">🖨️ Print</button>
+                            </div>
+                        </div>
+                        <canvas id="overallAverageChart"></canvas>
+                    </div>
+
                     <div class="summary-table-wrap" id="summaryTableWrap">
                         <table class="summary-table" id="summaryTable"></table>
                     </div>
@@ -3496,6 +3508,74 @@
             table.innerHTML =
                 `<thead>${groupRow}${metricRow}</thead>` +
                 `<tbody>${body}<tr class="avg-row">${avg}</tr></tbody>`;
+
+            // Update the overall average chart
+            updateOverallAverageChart();
+        }
+
+        function updateOverallAverageChart() {
+            const canvas = document.getElementById('overallAverageChart');
+            if (!canvas || !studentData) return;
+
+            if (charts.overallAverageChart) charts.overallAverageChart.destroy();
+
+            const days = filteredDays || studentData.days;
+            if (days.length === 0) return;
+
+            const categories = Array.from(enabledCategories);
+            const data = categories.map(cat => {
+                const values = days
+                    .map(day => day.categories && day.categories[cat] ? day.categories[cat].percentage : null)
+                    .filter(v => v != null);
+                return values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+            });
+
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+            charts.overallAverageChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: 'Average %',
+                        data: data,
+                        backgroundColor: data.map((v, idx) => {
+                            if (v >= 80) return '#10b981';
+                            if (v >= 60) return '#f59e0b';
+                            if (v >= 40) return '#ef4444';
+                            return '#dc2626';
+                        }),
+                        borderColor: '#334155',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'x',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return Math.round(context.parsed.y * 10) / 10 + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function escapeHtml(s) {
