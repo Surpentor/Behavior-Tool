@@ -3951,7 +3951,8 @@
             const title = document.getElementById('chartModalTitle');
             const modal = document.getElementById('chartModal');
 
-            const headerEl = canvas.closest('.chart-container')?.querySelector('.chart-title');
+            const headerEl = canvas.closest('.chart-container')?.querySelector('.chart-title')
+                || canvas.parentElement?.querySelector('h3');
             title.textContent = headerEl ? headerEl.textContent : chartId;
 
             // Create a wrapper div for the canvas
@@ -3966,6 +3967,17 @@
                     data: JSON.parse(JSON.stringify(originalChart.data)),
                     options: JSON.parse(JSON.stringify(originalChart.options))
                 };
+
+                // JSON.stringify strips functions (scriptable options like gradient borderColor).
+                // Copy them back from the original chart so gradients and dynamic colors persist.
+                originalChart.data.datasets.forEach((origDs, idx) => {
+                    if (!config.data.datasets[idx]) return;
+                    ['borderColor', 'backgroundColor', 'pointBackgroundColor', 'pointBorderColor'].forEach(prop => {
+                        if (typeof origDs[prop] === 'function') {
+                            config.data.datasets[idx][prop] = origDs[prop];
+                        }
+                    });
+                });
 
                 // Use setTimeout to ensure the canvas is rendered first
                 setTimeout(() => {
