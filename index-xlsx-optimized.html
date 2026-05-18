@@ -2041,7 +2041,15 @@
             } else if (type === 'category-overview') {
                 configPanel.innerHTML = '';
             } else if (type === 'timeslot-average') {
-                configPanel.innerHTML = '';
+                configPanel.innerHTML = `
+                    <label><strong>Select day:</strong></label>
+                    <div style="margin-top: 10px;">
+                        <select id="heatmapDaySelect" onchange="renderTimeslotAverageHeatmap()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <option value="all">All Days (Average)</option>
+                            ${filteredDays.map((d, idx) => `<option value="${idx}">${d.date.toLocaleDateString()}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
             } else if (type === 'daily-summary') {
                 configPanel.innerHTML = '';
             }
@@ -2077,14 +2085,14 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time</th>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px; position: sticky; left: 0; z-index: 10;">Time</th>
                                 ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${SLOT_LABELS.map((label, slotIdx) => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${label}</td>
                                     ${filteredDays.map(day => {
                                         let value = 0;
                                         if (metricType === 'cat') {
@@ -2133,14 +2141,14 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Category</th>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10;">Category</th>
                                 ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
@@ -2162,60 +2170,80 @@
 
         function renderTimeslotAverageHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
+            const daySelect = document.getElementById('heatmapDaySelect');
+            const selectedDayValue = daySelect?.value || 'all';
 
-            // Calculate average for each time slot across all filtered days
-            const slotAverages = Array(25).fill(0);
-            const slotCounts = Array(25).fill(0);
+            let slotAverages = Array(25).fill(0);
+            let slotCounts = Array(25).fill(0);
 
-            filteredDays.forEach(day => {
-                allCategoryNames.forEach(cat => {
-                    const catData = day.categories && day.categories[cat];
-                    if (catData && catData.slots) {
-                        for (let i = 0; i < 25; i++) {
-                            if (catData.slots[i] != null) {
-                                slotAverages[i] += catData.slots[i];
-                                slotCounts[i]++;
+            if (selectedDayValue === 'all') {
+                // Average across all filtered days
+                filteredDays.forEach(day => {
+                    allCategoryNames.forEach(cat => {
+                        const catData = day.categories && day.categories[cat];
+                        if (catData && catData.slots) {
+                            for (let i = 0; i < 25; i++) {
+                                if (catData.slots[i] != null) {
+                                    slotAverages[i] += catData.slots[i];
+                                    slotCounts[i]++;
+                                }
                             }
                         }
-                    }
+                    });
                 });
-            });
-
-            // Find max average for normalization
-            let maxAvg = 0;
-            for (let i = 0; i < 25; i++) {
-                if (slotCounts[i] > 0) {
-                    const avg = slotAverages[i] / slotCounts[i];
-                    maxAvg = Math.max(maxAvg, avg);
+            } else {
+                // Single day view
+                const dayIdx = parseInt(selectedDayValue);
+                const day = filteredDays[dayIdx];
+                if (day) {
+                    allCategoryNames.forEach(cat => {
+                        const catData = day.categories && day.categories[cat];
+                        if (catData && catData.slots) {
+                            for (let i = 0; i < 25; i++) {
+                                slotAverages[i] += catData.slots[i] ?? 0;
+                            }
+                        }
+                    });
+                    slotCounts = Array(25).fill(1);
                 }
             }
-            maxAvg = Math.max(maxAvg, 1);
+
+            // Find max for normalization
+            let maxVal = 0;
+            for (let i = 0; i < 25; i++) {
+                if (slotCounts[i] > 0) {
+                    const val = slotAverages[i] / slotCounts[i];
+                    maxVal = Math.max(maxVal, val);
+                }
+            }
+            maxVal = Math.max(maxVal, 1);
+
+            const title = selectedDayValue === 'all'
+                ? 'Time Slot Performance Average (All Days)'
+                : `Time Slot Performance - ${filteredDays[parseInt(selectedDayValue)].date.toLocaleDateString()}`;
 
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px;">Overall Time Slot Performance Average</h3>
-                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">Average points across all categories and days</p>
+                    <h3 style="margin-bottom: 15px;">${title}</h3>
                     <table style="border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time Slot</th>
-                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Average Points</th>
+                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px; position: sticky; left: 0; z-index: 10;">Category</th>
+                                ${SLOT_LABELS.map(label => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${label}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
-                            ${SLOT_LABELS.map((label, idx) => {
-                                const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
-                                const normalized = Math.max(0, Math.min(1, avg / maxAvg));
-                                const hue = normalized * 120;
-                                const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
-                                const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                return `
-                                    <tr>
-                                        <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
-                                        <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500;">${avg.toFixed(1)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
+                            <tr>
+                                <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">Average Points</td>
+                                ${SLOT_LABELS.map((label, idx) => {
+                                    const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
+                                    const normalized = Math.max(0, Math.min(1, avg / maxVal));
+                                    const hue = normalized * 120;
+                                    const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                                    const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                    return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${avg.toFixed(1)}</td>`;
+                                }).join('')}
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -2246,14 +2274,14 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Category</th>
+                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10;">Category</th>
                                 ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
+                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
