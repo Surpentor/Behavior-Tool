@@ -2110,6 +2110,7 @@
                     <label><strong>Select metric:</strong></label>
                     <div style="margin-top: 10px;">
                         <select id="heatmapMetricSelect" onchange="renderTimeslotHeatmap()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <option value="combined:core4">All Core 4 Behaviors (Combined)</option>
                             ${allCategoryNames.map(c => `<option value="cat:${c}">${c}</option>`).join('')}
                         </select>
                     </div>
@@ -2213,6 +2214,13 @@
             const resultsPanel = document.getElementById('heatmapResults');
             const [metricType, metricKey] = selectedMetric.split(':');
 
+            const coreBehaviors = [
+                'Complete Work',
+                'Hands, Body, Objects to self',
+                'Stay in Designated area',
+                'App. language/conversations'
+            ];
+
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Time Slot Performance Heatmap</h3>
@@ -2229,7 +2237,19 @@
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.75rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${label}</td>
                                     ${filteredDays.map(day => {
                                         let value = 0;
-                                        if (metricType === 'cat') {
+                                        if (metricType === 'combined') {
+                                            // Average all Core 4 behaviors
+                                            let total = 0;
+                                            let count = 0;
+                                            coreBehaviors.forEach(behavior => {
+                                                const catData = day.categories && day.categories[behavior];
+                                                if (catData && catData.slots && catData.slots[slotIdx] !== undefined) {
+                                                    total += catData.slots[slotIdx];
+                                                    count++;
+                                                }
+                                            });
+                                            value = count > 0 ? total / count : 0;
+                                        } else if (metricType === 'cat') {
                                             const catData = day.categories && day.categories[metricKey];
                                             value = catData && catData.slots ? (catData.slots[slotIdx] ?? 0) : 0;
                                         } else if (metricType === 'trk') {
