@@ -4292,12 +4292,11 @@
                     // Color for individual points based on their value
                     const getColorForValue = (v) => {
                         if (v == null) return '#cccccc';
-                        if (v >= 80) return '#10b981';
-                        if (v >= 70) return '#34d399';
-                        if (v >= 60) return '#fbbf24';
-                        if (v >= 50) return '#fb923c';
-                        if (v >= 40) return '#f97316';
-                        return '#ef4444';
+                        if (v >= 80) return '#10b981';  // Green
+                        if (v >= 70) return '#fbbf24';  // Yellow
+                        if (v >= 60) return '#fb923c';  // Orange
+                        if (v >= 50) return '#f97316';  // Dark orange
+                        return '#ef4444';                // Red
                     };
 
                     // Calculate dynamic y-axis range based on data
@@ -4311,10 +4310,9 @@
                         const valueToPos = v => Math.max(0, Math.min(1, (yRange.max - v) / range));
                         gradient.addColorStop(valueToPos(yRange.max), '#10b981');
                         gradient.addColorStop(valueToPos(Math.min(yRange.max, 80)), '#10b981');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 70)), '#34d399');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 60)), '#fbbf24');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 50)), '#fb923c');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 40)), '#f97316');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 70)), '#fbbf24');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 60)), '#fb923c');
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 50)), '#f97316');
                         gradient.addColorStop(valueToPos(yRange.min), '#ef4444');
                         return gradient;
                     };
