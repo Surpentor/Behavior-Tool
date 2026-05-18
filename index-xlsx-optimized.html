@@ -792,11 +792,26 @@
                         <!-- Step 2: Configure based on type -->
                         <!-- Hourly configuration -->
                         <div class="control-group" id="comparisonConfigHourly" style="margin-top: 15px; display: none;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <label><strong>2. Select metrics to display:</strong></label>
+                            <label><strong>2. Select metric category:</strong></label>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMetricCategory" value="core" checked onchange="updateHourlyMetricSelection()" style="cursor: pointer;">
+                                    <span style="cursor: pointer;">Core 4 Behaviors</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMetricCategory" value="custom" onchange="updateHourlyMetricSelection()" style="cursor: pointer;">
+                                    <span style="cursor: pointer;">Custom Behaviors</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="comparisonMetricCategory" value="bip" onchange="updateHourlyMetricSelection()" style="cursor: pointer;">
+                                    <span style="cursor: pointer;">BIP Goals</span>
+                                </label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <label><strong>Select metrics:</strong></label>
                                 <button class="btn btn-secondary" onclick="clearComparisonMetrics()" style="padding: 6px 12px; font-size: 0.85rem;">Clear All</button>
                             </div>
-                            <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px;"></div>
+                            <div id="comparisonMetricsCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;"></div>
                         </div>
 
                         <!-- Categories/Tracking configuration -->
@@ -1585,6 +1600,10 @@
             renderComparison();
         }
 
+        function updateHourlyMetricSelection() {
+            populateHourlyMetrics();
+        }
+
         function populateHourlyMetrics() {
             const checkboxes = document.getElementById('comparisonMetricsCheckboxes');
             if (!checkboxes) return;
@@ -1598,6 +1617,8 @@
                 'Stay in Designated area',
                 'App. language/conversations'
             ];
+
+            const category = document.querySelector('input[name="comparisonMetricCategory"]:checked')?.value || 'core';
 
             // Helper to create checkbox
             const createCheckboxLabel = (id, value, label, onChange) => {
@@ -1620,90 +1641,41 @@
                 return labelEl;
             };
 
-            // Helper to add section
-            const addSection = (title, items) => {
-                if (items.length === 0) return;
-                const section = document.createElement('div');
-                section.style.marginBottom = '12px';
-                const heading = document.createElement('div');
-                heading.style.fontSize = '0.85rem';
-                heading.style.fontWeight = '600';
-                heading.style.color = '#64748b';
-                heading.style.marginBottom = '6px';
-                heading.style.textTransform = 'uppercase';
-                heading.style.letterSpacing = '0.5px';
-                heading.textContent = title;
-                section.appendChild(heading);
-                items.forEach(item => section.appendChild(item));
-                checkboxes.appendChild(section);
-            };
-
-            // Core Behaviors
-            const coreItems = coreBehaviors
-                .filter(cat => allCategoryNames.includes(cat))
-                .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
-                    if (document.getElementById('cmp-metric-cat-' + cat).checked) {
-                        selectedComparisonMetrics.add('cat:' + cat);
-                    } else {
-                        selectedComparisonMetrics.delete('cat:' + cat);
-                    }
-                    renderComparison();
-                }));
-            addSection('Core Behaviors', coreItems);
-
-            // Other categories
-            const otherCatItems = allCategoryNames
-                .filter(cat => !coreBehaviors.includes(cat))
-                .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
-                    if (document.getElementById('cmp-metric-cat-' + cat).checked) {
-                        selectedComparisonMetrics.add('cat:' + cat);
-                    } else {
-                        selectedComparisonMetrics.delete('cat:' + cat);
-                    }
-                    renderComparison();
-                }));
-            if (otherCatItems.length > 0) {
-                addSection('Other Categories', otherCatItems);
-            }
-
-            // Custom Tracking
-            const trackingItems = (studentData.trackingMeta || []).map(meta => {
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = 'cmp-metric-trk-' + meta.slot;
-                checkbox.value = 'trk:' + meta.slot;
-                checkbox.checked = false;
-                checkbox.onchange = () => {
-                    if (checkbox.checked) {
-                        selectedComparisonMetrics.add(checkbox.value);
-                    } else {
-                        selectedComparisonMetrics.delete(checkbox.value);
-                    }
-                    renderComparison();
-                };
-
-                const label = document.createElement('label');
-                label.style.display = 'flex';
-                label.style.alignItems = 'center';
-                label.style.gap = '6px';
-                label.style.cursor = 'pointer';
-                label.style.fontSize = '0.9rem';
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(meta.label));
-                return label;
-            });
-            addSection('Custom Tracking', trackingItems);
-
-            // BIP Goals
-            const bipItems = [];
-            allBipGoalNames().forEach(name => {
-                ['freq', 'dur', 'inten'].forEach((metric) => {
-                    const metricLabel = metric === 'freq' ? 'Frequency' : metric === 'dur' ? 'Duration' : 'Intensity';
+            if (category === 'core') {
+                const coreItems = coreBehaviors
+                    .filter(cat => allCategoryNames.includes(cat))
+                    .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
+                        if (document.getElementById('cmp-metric-cat-' + cat).checked) {
+                            selectedComparisonMetrics.add('cat:' + cat);
+                        } else {
+                            selectedComparisonMetrics.delete('cat:' + cat);
+                        }
+                        renderComparison();
+                    }));
+                coreItems.forEach(item => checkboxes.appendChild(item));
+            } else if (category === 'custom') {
+                const customItems = allCategoryNames
+                    .filter(cat => !coreBehaviors.includes(cat))
+                    .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
+                        if (document.getElementById('cmp-metric-cat-' + cat).checked) {
+                            selectedComparisonMetrics.add('cat:' + cat);
+                        } else {
+                            selectedComparisonMetrics.delete('cat:' + cat);
+                        }
+                        renderComparison();
+                    }));
+                if (customItems.length > 0) {
+                    customItems.forEach(item => checkboxes.appendChild(item));
+                } else {
+                    checkboxes.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">No custom behaviors available</div>';
+                }
+            } else if (category === 'bip') {
+                const bipItems = (studentData.bipGoals || []).map(goal => {
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.id = 'cmp-metric-bip-' + name + '-' + metric;
-                    checkbox.value = 'bip:' + name + ':' + metric;
-                    checkbox.checked = false;
+                    checkbox.id = 'cmp-metric-bip-' + goal.id;
+                    checkbox.value = 'bip:' + goal.id;
+                    checkbox.checked = true;
                     checkbox.onchange = () => {
                         if (checkbox.checked) {
                             selectedComparisonMetrics.add(checkbox.value);
@@ -1712,19 +1684,26 @@
                         }
                         renderComparison();
                     };
+                    selectedComparisonMetrics.add(checkbox.value);
 
-                    const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.gap = '6px';
-                    label.style.cursor = 'pointer';
-                    label.style.fontSize = '0.9rem';
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(name + ' — ' + metricLabel));
-                    bipItems.push(label);
+                    const labelEl = document.createElement('label');
+                    labelEl.style.display = 'flex';
+                    labelEl.style.alignItems = 'center';
+                    labelEl.style.gap = '6px';
+                    labelEl.style.cursor = 'pointer';
+                    labelEl.style.fontSize = '0.9rem';
+                    labelEl.appendChild(checkbox);
+                    labelEl.appendChild(document.createTextNode(goal.name));
+                    return labelEl;
                 });
-            });
-            addSection('BIP Goals', bipItems);
+                if (bipItems.length > 0) {
+                    bipItems.forEach(item => checkboxes.appendChild(item));
+                } else {
+                    checkboxes.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">No BIP goals available</div>';
+                }
+            }
+
+            renderComparison();
         }
 
         function clearComparisonMetrics() {
