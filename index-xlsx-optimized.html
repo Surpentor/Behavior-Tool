@@ -434,13 +434,18 @@
         @media print {
             body { background: white; padding: 0; }
             .header, .clear-button, .print-btn, .metric-toggle, .upload-area,
-            .tabs, .controls-panel, .button-group, .chart-print-btn {
+            .tabs, .controls-panel, .button-group, .chart-print-btn, .chart-expand-btn,
+            #heatmapConfigPanel, #chartDisplayTypeGroup {
                 display: none !important;
             }
             .dashboard { margin: 0; padding: 0; }
             .tab-content { display: block !important; padding: 0; }
             .tabs-container { box-shadow: none; }
             .chart-container, .insight-card, .insight-list { break-inside: avoid; margin-bottom: 20px; box-shadow: none; border: 1px solid #ddd; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #999; padding: 8px; page-break-inside: avoid; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
         }
 
         @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
@@ -2070,22 +2075,49 @@
                 configPanel.innerHTML = '';
             } else if (type === 'timeslot-average') {
                 configPanel.innerHTML = `
-                    <label><strong>Select days to compare:</strong></label>
-                    <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px;">
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="checkbox" id="heatmapDaySelectAll" onchange="toggleAllHeatmapDays()" style="cursor: pointer;">
-                            <span>All Days</span>
-                        </label>
-                        ${filteredDays.map((d, idx) => `
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                <input type="checkbox" class="heatmapDayCheckbox" value="${idx}" onchange="renderTimeslotAverageHeatmap()" style="cursor: pointer;" checked>
-                                <span>${d.date.toLocaleDateString()}</span>
-                            </label>
-                        `).join('')}
+                    <div>
+                        <label><strong>Select days:</strong></label>
+                        <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                            ${filteredDays.map((d, idx) => `
+                                <button class="heatmapDayPill" data-idx="${idx}" style="padding: 8px 16px; border: 2px solid #cbd5e1; background: white; border-radius: 20px; cursor: pointer; font-weight: 500; transition: all 0.2s;" onclick="toggleHeatmapDayPill(${idx})">${d.date.toLocaleDateString()}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <label><strong>Categories to average:</strong></label>
+                        <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                            ${allCategoryNames.map(cat => `
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" class="heatmapCategoryCheckbox" value="${cat}" onchange="renderTimeslotAverageHeatmap()" style="cursor: pointer;" checked>
+                                    <span>${cat}</span>
+                                </label>
+                            `).join('')}
+                        </div>
                     </div>
                 `;
+                // Mark initial selected days
+                setTimeout(() => {
+                    filteredDays.forEach((_, idx) => {
+                        const pill = document.querySelector(`button.heatmapDayPill[data-idx="${idx}"]`);
+                        if (pill) pill.style.background = '#6366f1';
+                        if (pill) pill.style.color = 'white';
+                        if (pill) pill.style.borderColor = '#6366f1';
+                    });
+                }, 0);
             } else if (type === 'daily-summary') {
-                configPanel.innerHTML = '';
+                configPanel.innerHTML = `
+                    <label><strong>Display as:</strong></label>
+                    <div style="margin-top: 10px; display: flex; gap: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="dailySummaryDisplay" value="points" checked onchange="renderDailySummaryHeatmap()" style="cursor: pointer;">
+                            <span>Total Points (e.g., 6/10)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="dailySummaryDisplay" value="percentage" onchange="renderDailySummaryHeatmap()" style="cursor: pointer;">
+                            <span>Percentage</span>
+                        </label>
+                    </div>
+                `;
             }
 
             // Render appropriate heatmap
@@ -2213,20 +2245,47 @@
             resultsPanel.innerHTML = html;
         }
 
-        function toggleAllHeatmapDays() {
-            const allCheckbox = document.getElementById('heatmapDaySelectAll');
-            const dayCheckboxes = document.querySelectorAll('.heatmapDayCheckbox');
-            dayCheckboxes.forEach(cb => cb.checked = allCheckbox.checked);
+        function toggleHeatmapDayPill(idx) {
+            const pill = document.querySelector(`button.heatmapDayPill[data-idx="${idx}"]`);
+            const isSelected = pill.style.background === 'rgb(99, 102, 241)' || pill.style.background === '#6366f1';
+
+            if (isSelected) {
+                pill.style.background = 'white';
+                pill.style.color = '#334155';
+                pill.style.borderColor = '#cbd5e1';
+            } else {
+                pill.style.background = '#6366f1';
+                pill.style.color = 'white';
+                pill.style.borderColor = '#6366f1';
+            }
+
             renderTimeslotAverageHeatmap();
+        }
+
+        function getSelectedHeatmapDays() {
+            const pills = document.querySelectorAll('button.heatmapDayPill');
+            const selected = [];
+            pills.forEach(pill => {
+                const isSelected = pill.style.background === 'rgb(99, 102, 241)' || pill.style.background === '#6366f1';
+                if (isSelected) {
+                    selected.push(parseInt(pill.dataset.idx));
+                }
+            });
+            return selected.length > 0 ? selected : Array.from({length: filteredDays.length}, (_, i) => i);
+        }
+
+        function getSelectedHeatmapCategories() {
+            const checkboxes = document.querySelectorAll('.heatmapCategoryCheckbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
         }
 
         function renderTimeslotAverageHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
-            const dayCheckboxes = document.querySelectorAll('.heatmapDayCheckbox:checked');
-            const selectedDayIndices = Array.from(dayCheckboxes).map(cb => parseInt(cb.value));
+            const selectedDayIndices = getSelectedHeatmapDays();
+            const selectedCategories = getSelectedHeatmapCategories();
 
-            if (selectedDayIndices.length === 0) {
-                resultsPanel.innerHTML = '<div class="empty-message">Select at least one day to view.</div>';
+            if (selectedDayIndices.length === 0 || selectedCategories.length === 0) {
+                resultsPanel.innerHTML = '<div class="empty-message">Select at least one day and one category to view.</div>';
                 return;
             }
 
@@ -2238,7 +2297,7 @@
             selectedDayIndices.forEach(dayIdx => {
                 const day = filteredDays[dayIdx];
                 const daySlots = Array(25).fill(0);
-                allCategoryNames.forEach(cat => {
+                selectedCategories.forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
                         for (let i = 0; i < 25; i++) {
@@ -2255,7 +2314,7 @@
             const avgCounts = Array(25).fill(0);
             selectedDayIndices.forEach(dayIdx => {
                 const day = filteredDays[dayIdx];
-                allCategoryNames.forEach(cat => {
+                selectedCategories.forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
                         for (let i = 0; i < 25; i++) {
@@ -2330,6 +2389,7 @@
 
         function renderDailySummaryHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
+            const displayMode = document.querySelector('input[name="dailySummaryDisplay"]:checked')?.value || 'points';
 
             // Calculate max points for normalization
             let maxPoints = 0;
@@ -2346,7 +2406,10 @@
 
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px;">Daily Category Performance Summary</h3>
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 12px;">Daily Category Performance Summary</h3>
+                        <p style="color: #64748b; font-size: 0.9rem; margin: 0;">Max possible: <strong>${maxPoints} points per category per day</strong></p>
+                    </div>
                     <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2361,10 +2424,12 @@
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
+                                        const percentage = Math.round((points / maxPoints) * 100);
                                         const normalized = Math.max(0, Math.min(1, points / maxPoints));
                                         const bgColor = getHeatmapColor(normalized);
                                         const textColor = normalized > 0.65 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${points.toFixed(0)}</td>`;
+                                        const displayValue = displayMode === 'points' ? `${points}/${maxPoints}` : `${percentage}%`;
+                                        return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${displayValue}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
