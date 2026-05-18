@@ -2042,12 +2042,18 @@
                 configPanel.innerHTML = '';
             } else if (type === 'timeslot-average') {
                 configPanel.innerHTML = `
-                    <label><strong>Select day:</strong></label>
-                    <div style="margin-top: 10px;">
-                        <select id="heatmapDaySelect" onchange="renderTimeslotAverageHeatmap()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                            <option value="all">All Days (Average)</option>
-                            ${filteredDays.map((d, idx) => `<option value="${idx}">${d.date.toLocaleDateString()}</option>`).join('')}
-                        </select>
+                    <label><strong>Select days to compare:</strong></label>
+                    <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="heatmapDaySelectAll" onchange="toggleAllHeatmapDays()" style="cursor: pointer;">
+                            <span>All Days</span>
+                        </label>
+                        ${filteredDays.map((d, idx) => `
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" class="heatmapDayCheckbox" value="${idx}" onchange="renderTimeslotAverageHeatmap()" style="cursor: pointer;" checked>
+                                <span>${d.date.toLocaleDateString()}</span>
+                            </label>
+                        `).join('')}
                     </div>
                 `;
             } else if (type === 'daily-summary') {
@@ -2179,59 +2185,67 @@
             resultsPanel.innerHTML = html;
         }
 
+        function toggleAllHeatmapDays() {
+            const allCheckbox = document.getElementById('heatmapDaySelectAll');
+            const dayCheckboxes = document.querySelectorAll('.heatmapDayCheckbox');
+            dayCheckboxes.forEach(cb => cb.checked = allCheckbox.checked);
+            renderTimeslotAverageHeatmap();
+        }
+
         function renderTimeslotAverageHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
-            const daySelect = document.getElementById('heatmapDaySelect');
-            const selectedDayValue = daySelect?.value || 'all';
+            const dayCheckboxes = document.querySelectorAll('.heatmapDayCheckbox:checked');
+            const selectedDayIndices = Array.from(dayCheckboxes).map(cb => parseInt(cb.value));
 
-            let slotAverages = Array(25).fill(0);
-            let slotCounts = Array(25).fill(0);
+            if (selectedDayIndices.length === 0) {
+                resultsPanel.innerHTML = '<div class="empty-message">Select at least one day to view.</div>';
+                return;
+            }
 
-            if (selectedDayValue === 'all') {
-                // Average across all filtered days
-                filteredDays.forEach(day => {
-                    allCategoryNames.forEach(cat => {
-                        const catData = day.categories && day.categories[cat];
-                        if (catData && catData.slots) {
-                            for (let i = 0; i < 25; i++) {
-                                if (catData.slots[i] != null) {
-                                    slotAverages[i] += catData.slots[i];
-                                    slotCounts[i]++;
-                                }
-                            }
-                        }
-                    });
-                });
-            } else {
-                // Single day view
-                const dayIdx = parseInt(selectedDayValue);
+            // Build rows: one for each selected day + average row
+            const rows = [];
+            let globalMaxVal = 0;
+
+            // First pass: calculate max for all rows
+            selectedDayIndices.forEach(dayIdx => {
                 const day = filteredDays[dayIdx];
-                if (day) {
-                    allCategoryNames.forEach(cat => {
-                        const catData = day.categories && day.categories[cat];
-                        if (catData && catData.slots) {
-                            for (let i = 0; i < 25; i++) {
-                                slotAverages[i] += catData.slots[i] ?? 0;
+                const daySlots = Array(25).fill(0);
+                allCategoryNames.forEach(cat => {
+                    const catData = day.categories && day.categories[cat];
+                    if (catData && catData.slots) {
+                        for (let i = 0; i < 25; i++) {
+                            daySlots[i] += catData.slots[i] ?? 0;
+                        }
+                    }
+                });
+                const dayMax = Math.max(...daySlots);
+                globalMaxVal = Math.max(globalMaxVal, dayMax);
+            });
+
+            // Calculate average row
+            const avgSlots = Array(25).fill(0);
+            const avgCounts = Array(25).fill(0);
+            selectedDayIndices.forEach(dayIdx => {
+                const day = filteredDays[dayIdx];
+                allCategoryNames.forEach(cat => {
+                    const catData = day.categories && day.categories[cat];
+                    if (catData && catData.slots) {
+                        for (let i = 0; i < 25; i++) {
+                            if (catData.slots[i] != null) {
+                                avgSlots[i] += catData.slots[i];
+                                avgCounts[i]++;
                             }
                         }
-                    });
-                    slotCounts = Array(25).fill(1);
-                }
-            }
+                    }
+                });
+            });
+            const avgMax = Math.max(...avgSlots.map((v, i) => avgCounts[i] > 0 ? v / avgCounts[i] : 0));
+            globalMaxVal = Math.max(globalMaxVal, avgMax);
+            globalMaxVal = Math.max(globalMaxVal, 1);
 
-            // Find max for normalization
-            let maxVal = 0;
-            for (let i = 0; i < 25; i++) {
-                if (slotCounts[i] > 0) {
-                    const val = slotAverages[i] / slotCounts[i];
-                    maxVal = Math.max(maxVal, val);
-                }
-            }
-            maxVal = Math.max(maxVal, 1);
-
-            const title = selectedDayValue === 'all'
-                ? 'Time Slot Performance Average (All Days)'
-                : `Time Slot Performance - ${filteredDays[parseInt(selectedDayValue)].date.toLocaleDateString()}`;
+            const title = selectedDayIndices.length === filteredDays.length
+                ? 'Time Slot Performance (All Selected Days)'
+                : `Time Slot Performance (${selectedDayIndices.length} days)`;
 
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
@@ -2239,19 +2253,43 @@
                     <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 120px; position: sticky; left: 0; z-index: 10; color: #334155;">Time Slot</th>
+                                <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; color: #334155;">Day / Metric</th>
                                 ${SLOT_LABELS.map(label => `<th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; color: #334155;">${label}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">Points</td>
+                            ${selectedDayIndices.map(dayIdx => {
+                                const day = filteredDays[dayIdx];
+                                const daySlots = Array(25).fill(0);
+                                allCategoryNames.forEach(cat => {
+                                    const catData = day.categories && day.categories[cat];
+                                    if (catData && catData.slots) {
+                                        for (let i = 0; i < 25; i++) {
+                                            daySlots[i] += catData.slots[i] ?? 0;
+                                        }
+                                    }
+                                });
+                                return `
+                                    <tr>
+                                        <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">${day.date.toLocaleDateString()}</td>
+                                        ${SLOT_LABELS.map((label, idx) => {
+                                            const val = daySlots[idx];
+                                            const normalized = Math.max(0, Math.min(1, val / globalMaxVal));
+                                            const bgColor = getHeatmapColor(normalized);
+                                            const textColor = normalized > 0.65 ? 'white' : '#1e293b';
+                                            return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${val.toFixed(1)}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
+                            <tr style="border-top: 2px solid #cbd5e1;">
+                                <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 600; background: #f1f5f9; position: sticky; left: 0; z-index: 5; color: #334155;">Average</td>
                                 ${SLOT_LABELS.map((label, idx) => {
-                                    const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
-                                    const normalized = Math.max(0, Math.min(1, avg / maxVal));
+                                    const avg = avgCounts[idx] > 0 ? avgSlots[idx] / avgCounts[idx] : 0;
+                                    const normalized = Math.max(0, Math.min(1, avg / globalMaxVal));
                                     const bgColor = getHeatmapColor(normalized);
                                     const textColor = normalized > 0.65 ? 'white' : '#1e293b';
-                                    return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${avg.toFixed(1)}</td>`;
+                                    return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 600; min-width: 110px;">${avg.toFixed(1)}</td>`;
                                 }).join('')}
                             </tr>
                         </tbody>
