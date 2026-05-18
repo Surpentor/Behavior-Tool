@@ -1583,16 +1583,14 @@
                 if (selectedComparisonMetrics.size > 0 && isCoreBehavior) {
                     // Binary data shows as sparklines
                     options = [
-                        { value: 'sparklines', label: 'Sparklines (Color Pattern)' },
-                        { value: 'heatmap', label: 'Heatmap' }
+                        { value: 'sparklines', label: 'Sparklines (Color Pattern)' }
                     ];
                 } else {
                     // Non-binary metrics show regular charts
                     options = [
                         { value: 'line', label: 'Line Chart' },
                         { value: 'bar', label: 'Bar Chart' },
-                        { value: 'area', label: 'Area Chart' },
-                        { value: 'heatmap', label: 'Heatmap' }
+                        { value: 'area', label: 'Area Chart' }
                     ];
                 }
             } else if (type === 'categories') {
@@ -1600,24 +1598,21 @@
                 options = [
                     { value: 'line', label: 'Line Chart' },
                     { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' },
-                    { value: 'heatmap', label: 'Heatmap' }
+                    { value: 'area', label: 'Area Chart' }
                 ];
             } else if (type === 'bipgoals') {
                 // BIP goals are continuous values
                 options = [
                     { value: 'line', label: 'Line Chart' },
                     { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' },
-                    { value: 'heatmap', label: 'Heatmap' }
+                    { value: 'area', label: 'Area Chart' }
                 ];
             } else if (type === 'tracking') {
                 // Custom tracking - show all options
                 options = [
                     { value: 'line', label: 'Line Chart' },
                     { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' },
-                    { value: 'heatmap', label: 'Heatmap' }
+                    { value: 'area', label: 'Area Chart' }
                 ];
             }
 
@@ -2526,7 +2521,7 @@
                         <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                             <thead>
                                 <tr>
-                                    <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 200px; color: #334155;">Behavior / Date</th>
+                                    <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 200px; color: #334155; position: sticky; left: 0; z-index: 10; background: white; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Behavior / Date</th>
                                     ${SLOT_LABELS.map(label => `<th style="padding: 8px 6px; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; font-size: 0.75rem; color: #334155; min-width: 20px;">${label.length > 4 ? label.substring(0,2) : label}</th>`).join('')}
                                     <th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 100px; color: #334155;">% Earned</th>
                                 </tr>
@@ -2542,7 +2537,7 @@
 
                                         return `
                                             <tr>
-                                                <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; background: white; color: #334155;">${day.date.toLocaleDateString()} • ${catName}</td>
+                                                <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()} • ${catName}</td>
                                                 ${slots.map(val => {
                                                     const bgColor = val === 1 ? '#10b981' : '#ef4444';
                                                     return `<td style="padding: 4px; border: 1px solid #e2e8f0; background-color: ${bgColor}; min-width: 20px; height: 24px;"></td>`;
