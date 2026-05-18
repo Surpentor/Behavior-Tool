@@ -840,16 +840,9 @@
                         </div>
 
                         <!-- Chart Display Type -->
-                        <div class="control-group" style="margin-top: 15px;">
-                            <label for="chartDisplayType"><strong>4. Chart display type:</strong></label>
-                            <select id="chartDisplayType" onchange="renderComparison()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                                <option value="line">Line Chart</option>
-                                <option value="bar">Bar Chart</option>
-                                <option value="stacked">Stacked Bar Chart</option>
-                                <option value="area">Area Chart</option>
-                                <option value="step">Step Chart</option>
-                                <option value="heatmap">Heatmap</option>
-                            </select>
+                        <div class="control-group" style="margin-top: 15px;" id="chartDisplayTypeGroup" style="display: none;">
+                            <label for="chartDisplayType"><strong>4. Chart type:</strong></label>
+                            <select id="chartDisplayType" onchange="renderComparison()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;"></select>
                         </div>
 
                         <button class="btn btn-secondary" onclick="renderComparison()" style="margin-top: 15px;">Generate Comparison</button>
@@ -1505,6 +1498,49 @@
 
         let selectedComparisonMetrics = new Set();
 
+        function updateChartDisplayOptions(type) {
+            const select = document.getElementById('chartDisplayType');
+            const group = document.getElementById('chartDisplayTypeGroup');
+
+            let options = [];
+
+            if (type === 'hourly') {
+                // Core 4 behaviors are binary - show only bar charts
+                options = [
+                    { value: 'bar', label: 'Bar Chart' },
+                    { value: 'stacked', label: 'Stacked Bar Chart' },
+                    { value: 'heatmap', label: 'Heatmap' }
+                ];
+            } else if (type === 'categories') {
+                // Categories show percentage - line works well
+                options = [
+                    { value: 'line', label: 'Line Chart' },
+                    { value: 'bar', label: 'Bar Chart' },
+                    { value: 'area', label: 'Area Chart' },
+                    { value: 'heatmap', label: 'Heatmap' }
+                ];
+            } else if (type === 'bipgoals') {
+                // BIP goals are continuous values
+                options = [
+                    { value: 'line', label: 'Line Chart' },
+                    { value: 'bar', label: 'Bar Chart' },
+                    { value: 'area', label: 'Area Chart' },
+                    { value: 'heatmap', label: 'Heatmap' }
+                ];
+            } else if (type === 'tracking') {
+                // Custom tracking - show all options
+                options = [
+                    { value: 'line', label: 'Line Chart' },
+                    { value: 'bar', label: 'Bar Chart' },
+                    { value: 'area', label: 'Area Chart' },
+                    { value: 'heatmap', label: 'Heatmap' }
+                ];
+            }
+
+            select.innerHTML = options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+            group.style.display = 'block';
+        }
+
         function updateComparisonConfig() {
             const type = document.getElementById('comparisonChartType').value;
 
@@ -1517,6 +1553,8 @@
             selectedComparisonMetrics.clear();
             document.querySelectorAll('input[name="comparisonMode"]').forEach(r => r.checked = false);
             document.querySelectorAll('input[name="comparisonGrouping"]').forEach(r => r.checked = false);
+
+            updateChartDisplayOptions(type);
 
             if (type === 'hourly') {
                 document.getElementById('comparisonConfigHourly').style.display = 'block';
