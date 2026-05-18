@@ -2220,6 +2220,8 @@
                 'App. language/conversations'
             ];
 
+            const isCombined = metricType === 'combined';
+
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Time Slot Performance Heatmap</h3>
@@ -2259,7 +2261,8 @@
                                         const normalized = Math.max(0, Math.min(1, value));
                                         const bgColor = getHeatmapColor(normalized);
                                         const textColor = normalized > 0.65 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 90px; font-size: 0.75rem;">${value.toFixed(1)}</td>`;
+                                        const displayValue = isCombined ? value.toFixed(1) : '';
+                                        return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 90px; font-size: 0.75rem;">${displayValue}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
