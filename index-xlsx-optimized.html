@@ -1585,41 +1585,41 @@
                 if (selectedComparisonMetrics.size > 0 && isCoreBehavior) {
                     // Binary data shows as sparklines
                     options = [
-                        { value: 'sparklines', label: 'Sparklines (Color Pattern)' }
+                        { value: 'sparklines', label: 'Sparklines', tooltip: 'Color-coded grid showing earned (green) and not earned (red) for each time slot' }
                     ];
                 } else {
                     // Non-binary metrics show regular charts
                     options = [
-                        { value: 'line', label: 'Line Chart' },
-                        { value: 'bar', label: 'Bar Chart' },
-                        { value: 'area', label: 'Area Chart' }
+                        { value: 'line', label: 'Line', tooltip: 'Connect points with lines to show trends over time' },
+                        { value: 'bar', label: 'Bar', tooltip: 'Show values as vertical bars for easy comparison' },
+                        { value: 'area', label: 'Area', tooltip: 'Line chart with filled area to emphasize magnitude' }
                     ];
                 }
             } else if (type === 'categories') {
                 // Categories show percentage - line works well
                 options = [
-                    { value: 'line', label: 'Line Chart' },
-                    { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' }
+                    { value: 'line', label: 'Line', tooltip: 'Connect points with lines to show trends over time' },
+                    { value: 'bar', label: 'Bar', tooltip: 'Show values as vertical bars for easy comparison' },
+                    { value: 'area', label: 'Area', tooltip: 'Line chart with filled area to emphasize magnitude' }
                 ];
             } else if (type === 'bipgoals') {
                 // BIP goals are continuous values
                 options = [
-                    { value: 'line', label: 'Line Chart' },
-                    { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' }
+                    { value: 'line', label: 'Line', tooltip: 'Connect points with lines to show trends over time' },
+                    { value: 'bar', label: 'Bar', tooltip: 'Show values as vertical bars for easy comparison' },
+                    { value: 'area', label: 'Area', tooltip: 'Line chart with filled area to emphasize magnitude' }
                 ];
             } else if (type === 'tracking') {
                 // Custom tracking - show all options
                 options = [
-                    { value: 'line', label: 'Line Chart' },
-                    { value: 'bar', label: 'Bar Chart' },
-                    { value: 'area', label: 'Area Chart' }
+                    { value: 'line', label: 'Line', tooltip: 'Connect points with lines to show trends over time' },
+                    { value: 'bar', label: 'Bar', tooltip: 'Show values as vertical bars for easy comparison' },
+                    { value: 'area', label: 'Area', tooltip: 'Line chart with filled area to emphasize magnitude' }
                 ];
             }
 
             if (options.length > 0) {
-                select.innerHTML = options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                select.innerHTML = options.map(opt => `<option value="${opt.value}" title="${opt.tooltip}">${opt.label}</option>`).join('');
                 group.style.display = 'block';
             }
         }
