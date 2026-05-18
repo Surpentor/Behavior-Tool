@@ -2518,38 +2518,53 @@
 
             if (!isCore) return null; // Only use sparklines for core behaviors
 
+            // Group metrics by category for better organization
+            const groupedMetrics = {};
+            metrics.forEach(metric => {
+                const catName = metric.replace('cat:', '');
+                if (!groupedMetrics[catName]) {
+                    groupedMetrics[catName] = [];
+                }
+                groupedMetrics[catName].push(metric);
+            });
+
             let html = `
                 <div style="padding: 24px; background: white; border-radius: 12px;">
                     <h3 style="margin-bottom: 20px; font-size: 1.05rem; font-weight: 700;">Behavior Patterns Across Time Slots</h3>
-                    <div style="overflow-x: auto;">
-                        <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
+                    <div style="overflow-x: auto; min-height: 400px;">
+                        <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6; min-width: 1200px;">
                             <thead>
                                 <tr>
-                                    <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 200px; color: #334155; position: sticky; left: 0; z-index: 10; background: white; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Behavior / Date</th>
-                                    ${SLOT_LABELS.map(label => `<th style="padding: 8px 6px; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; font-size: 0.75rem; color: #334155; min-width: 20px;">${label.length > 4 ? label.substring(0,2) : label}</th>`).join('')}
+                                    <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 220px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Behavior / Date</th>
+                                    ${SLOT_LABELS.map(label => `<th style="padding: 8px 6px; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; font-size: 0.75rem; color: #334155; min-width: 22px;">${label.length > 4 ? label.substring(0,2) : label}</th>`).join('')}
                                     <th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 100px; color: #334155;">% Earned</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${days.flatMap(day =>
-                                    metrics.map(metric => {
-                                        const catName = metric.replace('cat:', '');
-                                        const catData = day.categories && day.categories[catName];
-                                        const slots = catData && catData.slots ? catData.slots : Array(25).fill(0);
-                                        const earned = slots.filter(v => v === 1).length;
-                                        const percentage = Math.round((earned / 25) * 100);
+                                ${Object.entries(groupedMetrics).flatMap(([categoryName, categoryMetrics]) =>
+                                    days.flatMap(day =>
+                                        categoryMetrics.map(metric => {
+                                            const catName = metric.replace('cat:', '');
+                                            const catData = day.categories && day.categories[catName];
+                                            const slots = catData && catData.slots ? catData.slots : Array(25).fill(0);
+                                            const earned = slots.filter(v => v === 1).length;
+                                            const percentage = Math.round((earned / 25) * 100);
+                                            const normalized = Math.max(0, Math.min(1, percentage / 100));
+                                            const percentBgColor = getHeatmapColor(normalized);
+                                            const percentTextColor = normalized > 0.65 ? 'white' : '#1e293b';
 
-                                        return `
-                                            <tr>
-                                                <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()} • ${catName}</td>
-                                                ${slots.map(val => {
-                                                    const bgColor = val === 1 ? '#10b981' : '#ef4444';
-                                                    return `<td style="padding: 4px; border: 1px solid #e2e8f0; background-color: ${bgColor}; min-width: 20px; height: 24px;"></td>`;
-                                                }).join('')}
-                                                <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; color: #334155;">${percentage}%</td>
-                                            </tr>
-                                        `;
-                                    })
+                                            return `
+                                                <tr>
+                                                    <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()} • ${catName}</td>
+                                                    ${slots.map(val => {
+                                                        const bgColor = val === 1 ? '#10b981' : '#ef4444';
+                                                        return `<td style="padding: 4px; border: 1px solid #e2e8f0; background-color: ${bgColor}; min-width: 22px; height: 24px;"></td>`;
+                                                    }).join('')}
+                                                    <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; background-color: ${percentBgColor}; color: ${percentTextColor};">${percentage}%</td>
+                                                </tr>
+                                            `;
+                                        })
+                                    )
                                 ).join('')}
                             </tbody>
                         </table>
