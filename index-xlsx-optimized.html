@@ -4211,43 +4211,71 @@
 
             container.innerHTML = html;
 
-            // Render the category averages chart
+            // Render the overall average trend chart
             setTimeout(() => {
                 const canvas = document.getElementById('insightsAverageChart');
                 if (canvas) {
                     if (charts.insightsAverageChart) charts.insightsAverageChart.destroy();
 
-                    const categories = catInsights.map(ci => ci.name);
-                    const averages = catInsights.map(ci => ci.avg);
-                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                    // Calculate overall average for each day
+                    const labels = days.map(d => d.date.toLocaleDateString());
+                    const overallAverages = days.map(day => {
+                        const cats = Object.values(day.categories || {});
+                        const catsWithData = cats.filter(c => c && c.percentage != null && c.presentSlots > 0);
+                        if (catsWithData.length === 0) return null;
+                        return catsWithData.reduce((s, c) => s + c.percentage, 0) / catsWithData.length;
+                    });
+
+                    // Create color array based on values (red to green gradient)
+                    const getColorForValue = (v) => {
+                        if (v == null) return '#cccccc';
+                        if (v >= 80) return '#10b981';      // Green
+                        if (v >= 70) return '#34d399';      // Light green
+                        if (v >= 60) return '#fbbf24';      // Yellow
+                        if (v >= 50) return '#fb923c';      // Orange
+                        if (v >= 40) return '#f97316';      // Dark orange
+                        return '#ef4444';                    // Red
+                    };
+
+                    const borderColors = overallAverages.map(v => getColorForValue(v));
+                    const pointBackgroundColors = overallAverages.map(v => {
+                        const color = getColorForValue(v);
+                        return v == null ? '#ddd' : color;
+                    });
 
                     charts.insightsAverageChart = new Chart(canvas.getContext('2d'), {
-                        type: 'bar',
+                        type: 'line',
                         data: {
-                            labels: categories,
+                            labels: labels,
                             datasets: [{
-                                label: 'Average %',
-                                data: averages,
-                                backgroundColor: averages.map(v => {
-                                    if (v >= 80) return '#10b981';
-                                    if (v >= 60) return '#fbbf24';
-                                    if (v >= 40) return '#f97316';
-                                    return '#ef4444';
-                                }),
-                                borderColor: '#334155',
-                                borderWidth: 1
+                                label: 'Overall Average %',
+                                data: overallAverages,
+                                borderColor: borderColors,
+                                backgroundColor: 'transparent',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                spanGaps: true,
+                                pointRadius: 5,
+                                pointBackgroundColor: pointBackgroundColors,
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
                             }]
                         },
                         options: {
-                            indexAxis: 'x',
                             responsive: true,
                             maintainAspectRatio: true,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
                             plugins: {
-                                legend: { display: false },
+                                legend: { display: true },
                                 tooltip: {
                                     callbacks: {
                                         label: function(context) {
-                                            return Math.round(context.parsed.y * 10) / 10 + '%';
+                                            const val = context.parsed.y;
+                                            return val != null ? Math.round(val * 10) / 10 + '%' : 'No data';
                                         }
                                     }
                                 }
