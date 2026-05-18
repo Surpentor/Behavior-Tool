@@ -1726,27 +1726,35 @@
                     }));
                 coreItems.forEach(item => checkboxes.appendChild(item));
             } else if (category === 'custom') {
-                const customItems = allCategoryNames
-                    .filter(cat => !coreBehaviors.includes(cat))
-                    .map(cat => createCheckboxLabel('cmp-metric-cat-' + cat, 'cat:' + cat, cat, () => {
-                        if (document.getElementById('cmp-metric-cat-' + cat).checked) {
-                            selectedComparisonMetrics.add('cat:' + cat);
+                // Custom Behaviors = Custom Tracking Metrics
+                const trackingMeta = studentData.trackingMeta || [];
+                const customItems = trackingMeta.map((meta, idx) => createCheckboxLabel(
+                    'cmp-metric-trk-' + meta.slot,
+                    'trk:' + meta.slot,
+                    meta.label,
+                    () => {
+                        if (document.getElementById('cmp-metric-trk-' + meta.slot).checked) {
+                            selectedComparisonMetrics.add('trk:' + meta.slot);
                         } else {
-                            selectedComparisonMetrics.delete('cat:' + cat);
+                            selectedComparisonMetrics.delete('trk:' + meta.slot);
                         }
+                        updateChartDisplayOptions('hourly');
                         renderComparison();
-                    }));
+                    }
+                ));
                 if (customItems.length > 0) {
                     customItems.forEach(item => checkboxes.appendChild(item));
                 } else {
-                    checkboxes.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">No custom behaviors available</div>';
+                    checkboxes.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">No custom tracking metrics available</div>';
                 }
             } else if (category === 'bip') {
-                const bipItems = (studentData.bipGoals || []).map(goal => {
+                // BIP Goals - get from all days
+                const bipGoalNames = allBipGoalNames();
+                const bipItems = bipGoalNames.map(goalName => {
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.id = 'cmp-metric-bip-' + goal.id;
-                    checkbox.value = 'bip:' + goal.name;
+                    checkbox.id = 'cmp-metric-bip-' + goalName.replace(/\s+/g, '-');
+                    checkbox.value = 'bip:' + goalName;
                     checkbox.checked = true;
                     checkbox.onchange = () => {
                         if (checkbox.checked) {
@@ -1766,7 +1774,7 @@
                     labelEl.style.cursor = 'pointer';
                     labelEl.style.fontSize = '0.9rem';
                     labelEl.appendChild(checkbox);
-                    labelEl.appendChild(document.createTextNode(goal.name));
+                    labelEl.appendChild(document.createTextNode(goalName));
                     return labelEl;
                 });
                 if (bipItems.length > 0) {
