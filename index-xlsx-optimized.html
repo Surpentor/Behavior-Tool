@@ -565,6 +565,22 @@
             border-top: 2px solid var(--secondary-color);
         }
         .summary-table tr.avg-row td.date-col { background: #d1fae5 !important; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { max-width: 100%; }
+            .dashboard-header { display: none; }
+            .tabs-container { box-shadow: none; }
+            .tabs { display: none; }
+            .tab-content { display: none; }
+            .tab-content.active { display: block; }
+            #heatmapConfigPanel, #heatmapType, select, button:not(.no-print), input[type="file"] { display: none !important; }
+            .chart-title { page-break-inside: avoid; }
+            table { page-break-inside: avoid; }
+            .heatmap-container { page-break-inside: avoid; }
+            .no-print { display: none !important; }
+            div[style*="overflow-x: auto"] { overflow: visible !important; }
+        }
     </style>
 </head>
 <body>
@@ -2228,15 +2244,15 @@
                     <table style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Time Slot</th>
-                                ${filteredDays.map(d => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                <th style="padding: 8px 12px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; position: sticky; left: 0; z-index: 10; background: white; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">Date</th>
+                                ${SLOT_LABELS.map(label => `<th style="padding: 8px 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 90px; color: #334155; font-size: 0.75rem;">${label}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
-                            ${SLOT_LABELS.map((label, slotIdx) => `
+                            ${filteredDays.map((day, dayIdx) => `
                                 <tr>
-                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.75rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${label}</td>
-                                    ${filteredDays.map(day => {
+                                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.75rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()}</td>
+                                    ${SLOT_LABELS.map((label, slotIdx) => {
                                         let value = 0;
                                         if (metricType === 'combined') {
                                             // Average all Core 4 behaviors
