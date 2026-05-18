@@ -2035,7 +2035,6 @@
                     <div style="margin-top: 10px;">
                         <select id="heatmapMetricSelect" onchange="renderTimeslotHeatmap()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
                             ${allCategoryNames.map(c => `<option value="cat:${c}">${c}</option>`).join('')}
-                            ${(studentData.trackingMeta || []).map(m => `<option value="trk:${m.slot}">${m.label}</option>`).join('')}
                         </select>
                     </div>
                 `;
@@ -2115,6 +2114,19 @@
         function renderCategoryHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
 
+            // Calculate max points for normalization
+            let maxPoints = 0;
+            filteredDays.forEach(day => {
+                Array.from(enabledCategories).forEach(cat => {
+                    const catData = day.categories && day.categories[cat];
+                    if (catData && catData.slots) {
+                        const points = catData.slots.reduce((sum, val) => sum + (val ?? 0), 0);
+                        maxPoints = Math.max(maxPoints, points);
+                    }
+                });
+            });
+            maxPoints = Math.max(maxPoints, 1);
+
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Category Performance Heatmap</h3>
@@ -2131,12 +2143,12 @@
                                     <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
-                                        const value = catData ? catData.percentage : 0;
-                                        const normalized = Math.max(0, Math.min(1, value));
+                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
+                                        const normalized = Math.max(0, Math.min(1, points / maxPoints));
                                         const hue = normalized * 120;
                                         const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
                                         const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${(value * 100).toFixed(0)}%</td>`;
+                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${points.toFixed(0)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
@@ -2169,28 +2181,38 @@
                 });
             });
 
+            // Find max average for normalization
+            let maxAvg = 0;
+            for (let i = 0; i < 25; i++) {
+                if (slotCounts[i] > 0) {
+                    const avg = slotAverages[i] / slotCounts[i];
+                    maxAvg = Math.max(maxAvg, avg);
+                }
+            }
+            maxAvg = Math.max(maxAvg, 1);
+
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Overall Time Slot Performance Average</h3>
-                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">Average performance across all categories and days</p>
+                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">Average points across all categories and days</p>
                     <table style="border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr>
                                 <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time Slot</th>
-                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Average Performance</th>
+                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Average Points</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${SLOT_LABELS.map((label, idx) => {
                                 const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
-                                const normalized = Math.max(0, Math.min(1, avg));
+                                const normalized = Math.max(0, Math.min(1, avg / maxAvg));
                                 const hue = normalized * 120;
                                 const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
                                 const textColor = normalized > 0.5 ? 'white' : '#1e293b';
                                 return `
                                     <tr>
                                         <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
-                                        <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500;">${(avg * 100).toFixed(0)}%</td>
+                                        <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500;">${avg.toFixed(1)}</td>
                                     </tr>
                                 `;
                             }).join('')}
@@ -2204,6 +2226,19 @@
 
         function renderDailySummaryHeatmap() {
             const resultsPanel = document.getElementById('heatmapResults');
+
+            // Calculate max points for normalization
+            let maxPoints = 0;
+            filteredDays.forEach(day => {
+                Array.from(enabledCategories).forEach(cat => {
+                    const catData = day.categories && day.categories[cat];
+                    if (catData && catData.slots) {
+                        const points = catData.slots.reduce((sum, val) => sum + (val ?? 0), 0);
+                        maxPoints = Math.max(maxPoints, points);
+                    }
+                });
+            });
+            maxPoints = Math.max(maxPoints, 1);
 
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
@@ -2221,12 +2256,12 @@
                                     <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
-                                        const value = catData ? catData.percentage : 0;
-                                        const normalized = Math.max(0, Math.min(1, value));
+                                        const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
+                                        const normalized = Math.max(0, Math.min(1, points / maxPoints));
                                         const hue = normalized * 120;
                                         const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
                                         const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${(value * 100).toFixed(0)}%</td>`;
+                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${points.toFixed(0)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
