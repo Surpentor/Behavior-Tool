@@ -2071,6 +2071,19 @@
             }
         }
 
+        function getHeatmapColor(normalized) {
+            // Red-Yellow-Green spectrum: 0 (red) → 0.5 (yellow) → 1 (green)
+            let hue;
+            if (normalized < 0.5) {
+                hue = normalized * 120; // 0 to 60 degrees (red to yellow)
+            } else {
+                hue = 60 + (normalized - 0.5) * 120; // 60 to 120 degrees (yellow to green)
+            }
+            const saturation = 85;
+            const lightness = 45;
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
         function renderTimeslotHeatmap() {
             const metricSelect = document.getElementById('heatmapMetricSelect');
             if (!metricSelect) return;
@@ -2082,17 +2095,17 @@
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Time Slot Performance Heatmap</h3>
-                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                    <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px; position: sticky; left: 0; z-index: 10;">Time</th>
-                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 120px; position: sticky; left: 0; z-index: 10; color: #334155;">Time Slot</th>
+                                ${filteredDays.map(d => `<th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; color: #334155;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${SLOT_LABELS.map((label, slotIdx) => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${label}</td>
+                                    <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">${label}</td>
                                     ${filteredDays.map(day => {
                                         let value = 0;
                                         if (metricType === 'cat') {
@@ -2104,10 +2117,9 @@
                                             value = trkData && trkData.slots ? (trkData.slots[slotIdx] ?? 0) : 0;
                                         }
                                         const normalized = Math.max(0, Math.min(1, value));
-                                        const hue = normalized * 120;
-                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
-                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${value.toFixed(1)}</td>`;
+                                        const bgColor = getHeatmapColor(normalized);
+                                        const textColor = normalized > 0.65 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${value.toFixed(1)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
@@ -2138,25 +2150,24 @@
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Category Performance Heatmap</h3>
-                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                    <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10;">Category</th>
-                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; color: #334155;">Category</th>
+                                ${filteredDays.map(d => `<th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; color: #334155;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${cat}</td>
+                                    <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
                                         const normalized = Math.max(0, Math.min(1, points / maxPoints));
-                                        const hue = normalized * 120;
-                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
-                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${points.toFixed(0)}</td>`;
+                                        const bgColor = getHeatmapColor(normalized);
+                                        const textColor = normalized > 0.65 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${points.toFixed(0)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
@@ -2225,23 +2236,22 @@
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">${title}</h3>
-                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                    <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px; position: sticky; left: 0; z-index: 10;">Category</th>
-                                ${SLOT_LABELS.map(label => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${label}</th>`).join('')}
+                                <th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 120px; position: sticky; left: 0; z-index: 10; color: #334155;">Time Slot</th>
+                                ${SLOT_LABELS.map(label => `<th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; color: #334155;">${label}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">Average Points</td>
+                                <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">Points</td>
                                 ${SLOT_LABELS.map((label, idx) => {
                                     const avg = slotCounts[idx] > 0 ? slotAverages[idx] / slotCounts[idx] : 0;
                                     const normalized = Math.max(0, Math.min(1, avg / maxVal));
-                                    const hue = normalized * 120;
-                                    const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
-                                    const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                    return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${avg.toFixed(1)}</td>`;
+                                    const bgColor = getHeatmapColor(normalized);
+                                    const textColor = normalized > 0.65 ? 'white' : '#1e293b';
+                                    return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${avg.toFixed(1)}</td>`;
                                 }).join('')}
                             </tr>
                         </tbody>
@@ -2271,25 +2281,24 @@
             let html = `
                 <div style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
                     <h3 style="margin-bottom: 15px;">Daily Category Performance Summary</h3>
-                    <table style="border-collapse: collapse; font-size: 0.85rem;">
+                    <table style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
-                                <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10;">Category</th>
-                                ${filteredDays.map(d => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                <th style="padding: 12px 16px; text-align: left; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; color: #334155;">Category</th>
+                                ${filteredDays.map(d => `<th style="padding: 12px 16px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; font-weight: 600; min-width: 110px; color: #334155;">${d.date.toLocaleDateString()}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                             ${Array.from(enabledCategories).map(cat => `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5;">${cat}</td>
+                                    <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: #f8fafc; position: sticky; left: 0; z-index: 5; color: #334155;">${cat}</td>
                                     ${filteredDays.map(day => {
                                         const catData = day.categories && day.categories[cat];
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val ?? 0), 0) : 0;
                                         const normalized = Math.max(0, Math.min(1, points / maxPoints));
-                                        const hue = normalized * 120;
-                                        const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
-                                        const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                        return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${points.toFixed(0)}</td>`;
+                                        const bgColor = getHeatmapColor(normalized);
+                                        const textColor = normalized > 0.65 ? 'white' : '#1e293b';
+                                        return `<td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 110px;">${points.toFixed(0)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
