@@ -1883,10 +1883,9 @@
         function renderHeatmap(container, datasets, axisLabels, days, type) {
             const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
 
-            // For heatmap, aggregate datasets into a matrix: metrics x dates
-            const metrics = [];
-            const dateColumns = days.map(d => d.date.toLocaleDateString());
-            const dataMatrix = {};
+            // Extract unique metric names from datasets
+            const metrics = new Set();
+            const dataByMetricAndDay = {};
 
             datasets.forEach(ds => {
                 const label = ds.label;
@@ -1895,23 +1894,20 @@
                     const date = dateMatch[1];
                     const metric = dateMatch[2];
 
-                    if (!metrics.includes(metric)) {
-                        metrics.push(metric);
-                    }
+                    metrics.add(metric);
 
-                    if (!dataMatrix[metric]) {
-                        dataMatrix[metric] = {};
+                    if (!dataByMetricAndDay[metric]) {
+                        dataByMetricAndDay[metric] = {};
                     }
-
-                    // For hourly data, calculate average of the values
-                    const value = Array.isArray(ds.data) ?
-                        ds.data.reduce((a, b) => a + b, 0) / ds.data.length :
-                        ds.data;
-                    dataMatrix[metric][date] = value;
+                    dataByMetricAndDay[metric][date] = ds.data;
                 }
             });
 
-            // Generate heatmap HTML
+            const metricsArray = Array.from(metrics).sort();
+            const defaultMetric = metricsArray[0];
+            const dateColumns = days.map(d => d.date.toLocaleDateString());
+
+            // Generate heatmap HTML with dropdown
             let html = `
                 <div class="charts-grid">
                     <div class="chart-container" style="grid-column: 1 / -1;">
@@ -1921,39 +1917,85 @@
                                 <button class="chart-print-btn" onclick="printChart('heatmapContainer')">Print</button>
                             </div>
                         </div>
-                        <div id="heatmapContainer" style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px;">
-                            <table style="border-collapse: collapse; font-size: 0.9rem;">
-                                <thead>
-                                    <tr>
-                                        <th style="padding: 12px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Metric</th>
-                                        ${dateColumns.map(date => `<th style="padding: 12px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 80px;">${date}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${metrics.map(metric => `
+                        <div style="padding: 20px; background: white; border-radius: 8px;">
+                            <div style="margin-bottom: 20px;">
+                                <label for="heatmapMetricSelect" style="display: block; margin-bottom: 8px; font-weight: 500;">Select metric to view:</label>
+                                <select id="heatmapMetricSelect" onchange="updateHeatmapMetric()" style="padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                                    ${metricsArray.map(m => `<option value="${m}">${m}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div id="heatmapContainer" style="overflow-x: auto;">
+                                <table style="border-collapse: collapse; font-size: 0.85rem;">
+                                    <thead>
                                         <tr>
-                                            <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; text-align: left;">${metric}</td>
-                                            ${dateColumns.map(date => {
-                                                const value = dataMatrix[metric]?.[date] ?? 0;
-                                                const normalized = Math.max(0, Math.min(1, value));
-                                                // Red (0) to Green (1) gradient
-                                                const hue = normalized * 120;
-                                                const saturation = 100;
-                                                const lightness = 50 - (normalized * 30);
-                                                const bgColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                                                const textColor = normalized > 0.5 ? 'white' : '#1e293b';
-                                                return `<td style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 600; min-width: 80px;"></td>`;
-                                            }).join('')}
+                                            <th style="padding: 10px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 120px;">Time</th>
+                                            ${dateColumns.map(date => `<th style="padding: 10px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 100px;">${date}</th>`).join('')}
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody id="heatmapTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
 
             container.innerHTML = html;
+
+            // Store data for updating
+            window.heatmapData = {
+                dataByMetricAndDay,
+                metricsArray,
+                defaultMetric,
+                dateColumns,
+                axisLabels,
+                days
+            };
+
+            // Render initial heatmap
+            updateHeatmapMetric();
+        }
+
+        function updateHeatmapMetric() {
+            const data = window.heatmapData;
+            if (!data) return;
+
+            const selectedMetric = document.getElementById('heatmapMetricSelect')?.value || data.defaultMetric;
+            const metricData = data.dataByMetricAndDay[selectedMetric];
+
+            if (!metricData) return;
+
+            let html = '';
+            const slotLabels = data.axisLabels || data.days.flatMap((d, i) =>
+                i === 0 ? ['Arrival', ...Array.from({length: 24}, (_, j) => {
+                    const hour = 8 + Math.floor(j / 3);
+                    const min = (j % 3) * 20;
+                    return `${hour}:${min.toString().padStart(2, '0')}`;
+                }), 'Dismissal'] : []
+            );
+
+            // Use SLOT_LABELS if available
+            const displayLabels = typeof SLOT_LABELS !== 'undefined' ? SLOT_LABELS : slotLabels;
+
+            displayLabels.forEach((label, slotIdx) => {
+                html += `
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; text-align: left;">${label}</td>
+                        ${data.dateColumns.map(date => {
+                            const slotValues = metricData[date];
+                            const value = slotValues && slotValues[slotIdx] !== undefined ? slotValues[slotIdx] : 0;
+                            const normalized = Math.max(0, Math.min(1, value));
+                            const hue = normalized * 120;
+                            const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                            const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                            return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${typeof value === 'number' ? value.toFixed(1) : value}</td>`;
+                        }).join('')}
+                    </tr>
+                `;
+            });
+
+            document.getElementById('heatmapTableBody').innerHTML = html;
         }
 
         function renderComparison() {
