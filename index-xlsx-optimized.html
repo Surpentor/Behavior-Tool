@@ -4237,24 +4237,48 @@
                         return '#ef4444';                    // Red
                     };
 
-                    // Create canvas gradient for smooth line color transition
-                    const ctx = canvas.getContext('2d');
-                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-                    gradient.addColorStop(0, '#ef4444');    // Red
-                    gradient.addColorStop(0.25, '#f97316'); // Dark orange
-                    gradient.addColorStop(0.5, '#fbbf24');  // Yellow
-                    gradient.addColorStop(0.75, '#34d399'); // Light green
-                    gradient.addColorStop(1, '#10b981');    // Green
+                    // Create multiple line segments with interpolated colors for smooth gradient effect
+                    const datasets = [];
+                    for (let i = 0; i < overallAverages.length - 1; i++) {
+                        const currVal = overallAverages[i];
+                        const nextVal = overallAverages[i + 1];
 
-                    // Single dataset with gradient line
-                    const datasets = [{
+                        // Skip if both are null
+                        if (currVal == null && nextVal == null) continue;
+
+                        // Interpolate color between the two points
+                        let segmentColor;
+                        if (currVal != null && nextVal != null) {
+                            const avgVal = (currVal + nextVal) / 2;
+                            segmentColor = getColorForValue(avgVal);
+                        } else if (currVal != null) {
+                            segmentColor = getColorForValue(currVal);
+                        } else {
+                            segmentColor = getColorForValue(nextVal);
+                        }
+
+                        const data = new Array(overallAverages.length).fill(null);
+                        data[i] = currVal;
+                        data[i + 1] = nextVal;
+
+                        datasets.push({
+                            data: data,
+                            borderColor: segmentColor,
+                            backgroundColor: 'transparent',
+                            borderWidth: 4,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            borderCapStyle: 'round',
+                            borderJoinStyle: 'round'
+                        });
+                    }
+
+                    // Add separate dataset for points with value-based colors
+                    datasets.push({
                         label: 'Overall Average %',
                         data: overallAverages,
-                        borderColor: gradient,
-                        backgroundColor: 'transparent',
-                        borderWidth: 4,
-                        fill: false,
-                        tension: 0.4,
                         pointRadius: 5,
                         pointBackgroundColor: overallAverages.map(v => {
                             const color = getColorForValue(v);
@@ -4262,9 +4286,9 @@
                         }),
                         pointBorderColor: '#fff',
                         pointBorderWidth: 2,
-                        borderCapStyle: 'round',
-                        borderJoinStyle: 'round'
-                    }];
+                        showLine: false,
+                        fill: false
+                    });
 
                     charts.insightsAverageChart = new Chart(canvas.getContext('2d'), {
                         type: 'line',
@@ -4280,7 +4304,7 @@
                                 intersect: false
                             },
                             plugins: {
-                                legend: { display: false },
+                                legend: { display: true },
                                 tooltip: {
                                     callbacks: {
                                         label: function(context) {
