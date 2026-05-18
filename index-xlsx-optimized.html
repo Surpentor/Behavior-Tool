@@ -1882,9 +1882,37 @@
 
         function renderHeatmap(container, datasets, axisLabels, days, type) {
             const modeLabel = type === 'bipgoals' ? 'Overlay' : 'Combined';
-            const groupingLabel = '';
 
-            container.innerHTML = `
+            // For heatmap, aggregate datasets into a matrix: metrics x dates
+            const metrics = [];
+            const dateColumns = days.map(d => d.date.toLocaleDateString());
+            const dataMatrix = {};
+
+            datasets.forEach(ds => {
+                const label = ds.label;
+                const dateMatch = label.match(/^(.*?)\s*-\s*(.+)$/);
+                if (dateMatch) {
+                    const date = dateMatch[1];
+                    const metric = dateMatch[2];
+
+                    if (!metrics.includes(metric)) {
+                        metrics.push(metric);
+                    }
+
+                    if (!dataMatrix[metric]) {
+                        dataMatrix[metric] = {};
+                    }
+
+                    // For hourly data, calculate average of the values
+                    const value = Array.isArray(ds.data) ?
+                        ds.data.reduce((a, b) => a + b, 0) / ds.data.length :
+                        ds.data;
+                    dataMatrix[metric][date] = value;
+                }
+            });
+
+            // Generate heatmap HTML
+            let html = `
                 <div class="charts-grid">
                     <div class="chart-container" style="grid-column: 1 / -1;">
                         <div class="chart-header">
@@ -1894,23 +1922,27 @@
                             </div>
                         </div>
                         <div id="heatmapContainer" style="overflow-x: auto; padding: 20px; background: white; border-radius: 8px;">
-                            <table style="border-collapse: collapse; font-size: 0.85rem;">
+                            <table style="border-collapse: collapse; font-size: 0.9rem;">
                                 <thead>
                                     <tr>
-                                        <th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb; background: #f8fafc; font-weight: 600;">Metric</th>
-                                        ${days.map(d => `<th style="padding: 8px; text-align: center; border: 1px solid #e5e7eb; background: #f8fafc; font-weight: 600;">${d.date.toLocaleDateString()}</th>`).join('')}
+                                        <th style="padding: 12px; text-align: left; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 150px;">Metric</th>
+                                        ${dateColumns.map(date => `<th style="padding: 12px; text-align: center; border: 2px solid #e5e7eb; background: #f8fafc; font-weight: 600; min-width: 80px;">${date}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${axisLabels.map((label, labelIdx) => `
+                                    ${metrics.map(metric => `
                                         <tr>
-                                            <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc;">${label}</td>
-                                            ${datasets.map((ds, dsIdx) => {
-                                                const value = ds.data[labelIdx];
-                                                const normalized = Math.max(0, Math.min(1, value / getYAxisMax(datasets)));
+                                            <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; background: #f8fafc; text-align: left;">${metric}</td>
+                                            ${dateColumns.map(date => {
+                                                const value = dataMatrix[metric]?.[date] ?? 0;
+                                                const normalized = Math.max(0, Math.min(1, value));
+                                                // Red (0) to Green (1) gradient
                                                 const hue = normalized * 120;
-                                                const bgColor = `hsl(${hue}, 100%, ${100 - normalized * 50}%)`;
-                                                return `<td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${normalized > 0.5 ? 'white' : 'black'}; font-weight: 500;">${typeof value === 'number' ? value.toFixed(2) : value}</td>`;
+                                                const saturation = 100;
+                                                const lightness = 50 - (normalized * 30);
+                                                const bgColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                                                const textColor = normalized > 0.5 ? 'white' : '#1e293b';
+                                                return `<td style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 600; min-width: 80px;"></td>`;
                                             }).join('')}
                                         </tr>
                                     `).join('')}
@@ -1920,6 +1952,8 @@
                     </div>
                 </div>
             `;
+
+            container.innerHTML = html;
         }
 
         function renderComparison() {
