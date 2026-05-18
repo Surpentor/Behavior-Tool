@@ -1565,6 +1565,8 @@
             const select = document.getElementById('chartDisplayType');
             const group = document.getElementById('chartDisplayTypeGroup');
 
+            if (!select || !group) return; // Safety check
+
             let options = [];
 
             if (type === 'hourly') {
@@ -1576,7 +1578,7 @@
                     'App. language/conversations'
                 ];
                 const isCoreBehavior = Array.from(selectedComparisonMetrics).every(m => {
-                    const name = m.replace('cat:', '');
+                    const name = m.replace('cat:', '').replace('bip:', '');
                     return coreBehaviors.includes(name);
                 });
 
@@ -1616,8 +1618,10 @@
                 ];
             }
 
-            select.innerHTML = options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
-            group.style.display = 'block';
+            if (options.length > 0) {
+                select.innerHTML = options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                group.style.display = 'block';
+            }
         }
 
         function updateComparisonConfig() {
