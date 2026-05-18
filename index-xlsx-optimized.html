@@ -1568,12 +1568,33 @@
             let options = [];
 
             if (type === 'hourly') {
-                // Core 4 behaviors are binary - show only bar charts
-                options = [
-                    { value: 'bar', label: 'Bar Chart' },
-                    { value: 'stacked', label: 'Stacked Bar Chart' },
-                    { value: 'heatmap', label: 'Heatmap' }
+                // Check if selected metrics are Core 4 behaviors (binary)
+                const coreBehaviors = [
+                    'Complete Work',
+                    'Hands, Body, Objects to self',
+                    'Stay in Designated area',
+                    'App. language/conversations'
                 ];
+                const isCoreBehavior = Array.from(selectedComparisonMetrics).every(m => {
+                    const name = m.replace('cat:', '');
+                    return coreBehaviors.includes(name);
+                });
+
+                if (selectedComparisonMetrics.size > 0 && isCoreBehavior) {
+                    // Binary data shows as sparklines
+                    options = [
+                        { value: 'sparklines', label: 'Sparklines (Color Pattern)' },
+                        { value: 'heatmap', label: 'Heatmap' }
+                    ];
+                } else {
+                    // Non-binary metrics show regular charts
+                    options = [
+                        { value: 'line', label: 'Line Chart' },
+                        { value: 'bar', label: 'Bar Chart' },
+                        { value: 'area', label: 'Area Chart' },
+                        { value: 'heatmap', label: 'Heatmap' }
+                    ];
+                }
             } else if (type === 'categories') {
                 // Categories show percentage - line works well
                 options = [
@@ -1739,6 +1760,8 @@
                 }
             }
 
+            // Update chart display options based on selected metrics
+            updateChartDisplayOptions('hourly');
             renderComparison();
         }
 
@@ -1750,23 +1773,13 @@
         }
 
         function clearComparisonDates() {
-            document.querySelectorAll('#dateCheckboxList input[type="checkbox"]').forEach(cb => {
-                cb.checked = false;
-                cb.onchange();
+            selectedDatesForComparison.clear();
+            // Reset all pill colors
+            document.querySelectorAll('button.comparisonDatePill').forEach(pill => {
+                pill.style.background = 'white';
+                pill.style.color = '#334155';
+                pill.style.borderColor = '#cbd5e1';
             });
-        }
-
-        function toggleComparisonDate(idx) {
-            if (document.getElementById('date-' + idx).checked) {
-                if (selectedDatesForComparison.size < 5) {
-                    selectedDatesForComparison.add(idx);
-                } else {
-                    document.getElementById('date-' + idx).checked = false;
-                    showMessage('Maximum 5 dates for comparison', 'error');
-                }
-            } else {
-                selectedDatesForComparison.delete(idx);
-            }
             renderComparison();
         }
 
