@@ -1981,19 +1981,50 @@
 
                     metrics.forEach((metric, metricIdx) => {
                         const data = [];
-                        for (let slot = 0; slot < 25; slot++) {
-                            let sum = 0;
-                            let hasData = false;
-                            selectedGoals.forEach(goalName => {
-                                const goal = day.bipGoals && day.bipGoals.length > 0 ? day.bipGoals.find(g => g.name === goalName) : null;
-                                if (goal && goal[metric.key] && goal[metric.key][slot] != null) {
-                                    const slotValue = goal[metric.key][slot];
-                                    sum += slotValue;
-                                    hasData = true;
+
+                        // Check if we have slot data or just daily totals
+                        const metricKey = metric.key; // 'freqSlots', 'durSlots', or 'intenSlots'
+                        const dailyKey = metricKey.slice(0, -5); // 'freq', 'dur', or 'inten'
+
+                        // Check if slot data exists and varies
+                        let hasSlotData = false;
+                        let slotValues = [];
+
+                        selectedGoals.forEach(goalName => {
+                            const goal = day.bipGoals && day.bipGoals.find(g => g.name === goalName);
+                            if (goal && goal[metricKey] && goal[metricKey].some(v => v != null)) {
+                                hasSlotData = true;
+                                if (!slotValues.length) {
+                                    slotValues = goal[metricKey];
                                 }
-                            });
-                            // Only add data if at least one goal has data for this slot
-                            data.push(hasData ? sum / selectedGoals.length : null);
+                            }
+                        });
+
+                        for (let slot = 0; slot < 25; slot++) {
+                            if (hasSlotData) {
+                                // Use slot data if available
+                                let sum = 0;
+                                let count = 0;
+                                selectedGoals.forEach(goalName => {
+                                    const goal = day.bipGoals && day.bipGoals.find(g => g.name === goalName);
+                                    if (goal && goal[metricKey] && goal[metricKey][slot] != null) {
+                                        sum += goal[metricKey][slot];
+                                        count++;
+                                    }
+                                });
+                                data.push(count > 0 ? sum / count : null);
+                            } else {
+                                // No slot data - show daily total only at first slot
+                                let sum = 0;
+                                selectedGoals.forEach(goalName => {
+                                    const goal = day.bipGoals && day.bipGoals.find(g => g.name === goalName);
+                                    if (goal && goal[dailyKey] != null) {
+                                        sum += goal[dailyKey];
+                                    }
+                                });
+                                const dailyAvg = selectedGoals.length > 0 ? sum / selectedGoals.length : 0;
+                                data.push(slot === 0 ? dailyAvg : null);
+                            }
                         }
 
                         datasets.push({
