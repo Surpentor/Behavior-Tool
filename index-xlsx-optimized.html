@@ -2241,7 +2241,8 @@
             const {
                 isPercentage = false,
                 forceZeroMin = false,
-                absoluteMax = isPercentage ? 100 : Infinity,
+                // Allow percentages to overshoot 100 slightly so 100% values aren't bumped against the top
+                absoluteMax = isPercentage ? 110 : Infinity,
                 integerOnly = false
             } = options;
 
@@ -2272,7 +2273,9 @@
             if (isPercentage) {
                 // Round to nice 5% increments
                 min = Math.max(0, Math.floor(min / 5) * 5);
-                max = Math.min(100, Math.ceil(max / 5) * 5);
+                // If data hits 100, allow up to 110 for breathing room; otherwise cap at 100
+                const ceiling = maxVal >= 100 ? 110 : 100;
+                max = Math.min(ceiling, Math.ceil(max / 5) * 5);
             } else if (integerOnly) {
                 min = Math.max(0, Math.floor(min));
                 max = Math.ceil(max);
