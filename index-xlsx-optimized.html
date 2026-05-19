@@ -1248,9 +1248,7 @@
                         presentSlots++;
                     }
                 }
-                // Clamp each slot at 1 for percentage calc (binary scoring: 0 or 1 per slot)
-                const cappedTotal = slots.reduce((s, v) => s + (v == null ? 0 : Math.min(1, Math.max(0, v))), 0);
-                const percentage = presentSlots > 0 ? (cappedTotal / presentSlots) * 100 : 0;
+                const percentage = presentSlots > 0 ? (total / presentSlots) * 100 : 0;
                 block.categories[catName] = {
                     slots,
                     total,
@@ -2686,7 +2684,7 @@
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0) : null;
                                         if (points === null || (catData && catData.presentSlots === 0)) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #1a1a1a; color: #666; font-weight: 500; min-width: 90px; font-size: 0.8rem;"></td>`;
                                         const possiblePoints = catData ? catData.presentSlots : 0;
-                                        const percentage = possiblePoints > 0 ? Math.min(100, Math.round((points / possiblePoints) * 100)) : 0;
+                                        const percentage = possiblePoints > 0 ? Math.round((points / possiblePoints) * 100) : 0;
                                         const normalized = possiblePoints > 0 ? Math.max(0, Math.min(1, points / possiblePoints)) : 0;
                                         const bgColor = getHeatmapColor(normalized);
                                         const textColor = normalized > 0.65 ? 'white' : '#1e293b';
@@ -2711,7 +2709,7 @@
                                         }
                                     });
                                     if (!hasData) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #1a1a1a; color: #666; font-weight: 600; min-width: 90px; font-size: 0.8rem;"></td>`;
-                                    const percentage = totalPossible > 0 ? Math.min(100, Math.round((totalPoints / totalPossible) * 100)) : 0;
+                                    const percentage = totalPossible > 0 ? Math.round((totalPoints / totalPossible) * 100) : 0;
                                     const normalized = totalPossible > 0 ? Math.max(0, Math.min(1, totalPoints / totalPossible)) : 0;
                                     const bgColor = getHeatmapColor(normalized);
                                     const textColor = normalized > 0.65 ? 'white' : '#1e293b';
@@ -2962,7 +2960,7 @@
                                         const points = catData && catData.slots ? catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0) : null;
                                         if (points === null || (catData && catData.presentSlots === 0)) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #1a1a1a; color: #666; font-weight: 500; min-width: 90px; font-size: 0.75rem;"></td>`;
                                         const possiblePoints = catData ? catData.presentSlots : 0;
-                                        const percentage = possiblePoints > 0 ? Math.min(100, Math.round((points / possiblePoints) * 100)) : 0;
+                                        const percentage = possiblePoints > 0 ? Math.round((points / possiblePoints) * 100) : 0;
                                         const normalized = possiblePoints > 0 ? Math.max(0, Math.min(1, points / possiblePoints)) : 0;
                                         const bgColor = getHeatmapColor(normalized);
                                         const textColor = normalized > 0.65 ? 'white' : '#1e293b';
@@ -2987,7 +2985,7 @@
                                         }
                                     });
                                     if (!hasData) return `<td style="padding: 6px 8px; text-align: center; border: 1px solid #e2e8f0; background-color: #1a1a1a; color: #666; font-weight: 600; min-width: 90px; font-size: 0.75rem;"></td>`;
-                                    const percentage = totalPossible > 0 ? Math.min(100, Math.round((totalPoints / totalPossible) * 100)) : 0;
+                                    const percentage = totalPossible > 0 ? Math.round((totalPoints / totalPossible) * 100) : 0;
                                     const normalized = totalPossible > 0 ? Math.max(0, Math.min(1, totalPoints / totalPossible)) : 0;
                                     const bgColor = getHeatmapColor(normalized);
                                     const textColor = normalized > 0.65 ? 'white' : '#1e293b';
