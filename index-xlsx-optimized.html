@@ -2035,7 +2035,7 @@
                             backgroundColor: colors[metricIdx] + '40',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.4,
+                            tension: 0.4, cubicInterpolationMode: 'monotone',
                             spanGaps: true
                         });
                     });
@@ -3196,7 +3196,7 @@
                         data: series.values,
                         borderColor: c,
                         backgroundColor: chartType === 'line' ? c + '20' : c,
-                        tension: 0.4,
+                        tension: 0.4, cubicInterpolationMode: 'monotone',
                         fill: chartType === 'line',
                         borderWidth: 2
                     }];
@@ -3633,6 +3633,7 @@
                     borderColor: colors[idx % colors.length],
                     backgroundColor: colors[idx % colors.length] + '20',
                     tension: 0.4,
+                    cubicInterpolationMode: 'monotone',
                     fill: false,
                     borderWidth: 2
                 };
@@ -3843,7 +3844,7 @@
                     data,
                     borderColor: colors[idx % colors.length],
                     backgroundColor: colors[idx % colors.length] + '20',
-                    tension: 0.4,
+                    tension: 0.4, cubicInterpolationMode: 'monotone',
                     fill: false,
                     borderWidth: 2
                 };
@@ -3888,7 +3889,7 @@
                     data,
                     borderColor: '#8b5cf6',
                     backgroundColor: '#8b5cf620',
-                    tension: 0.4,
+                    tension: 0.4, cubicInterpolationMode: 'monotone',
                     fill: true,
                     borderWidth: 2
                 };
@@ -3927,9 +3928,9 @@
                 });
 
                 const bipDatasets = [
-                    { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, fill: false, borderWidth: 2 },
-                    { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, fill: false, borderWidth: 2 },
-                    { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, fill: false, borderWidth: 2 }
+                    { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
+                    { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
+                    { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 }
                 ];
                 const yRange = calcYAxisRange(bipDatasets, { integerOnly: true });
                 charts[key] = new Chart(canvas.getContext('2d'), {
@@ -4349,7 +4350,7 @@
                                 backgroundColor: 'transparent',
                                 borderWidth: 3,
                                 fill: false,
-                                tension: 0.4,
+                                tension: 0.4, cubicInterpolationMode: 'monotone',
                                 pointRadius: 4,
                                 pointHoverRadius: 6,
                                 pointBackgroundColor: overallAverages.map(v => v == null ? '#ddd' : getColorForValue(v)),
