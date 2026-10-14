@@ -439,24 +439,36 @@
         .trend-flat { background: #e2e8f0; color: #475569; }
 
         @page { size: 8.5in 11in; margin: 0.5in; }
+
+
+        /* Print Current Tab: only the active tab, sized for US Letter */
+        @page { size: letter; margin: 0.5in; }
         @media print {
-            body { background: white; padding: 0; }
-            .header, .clear-button, .print-btn, .metric-toggle, .upload-area,
-            .tabs, .controls-panel, .button-group, .chart-print-btn, .chart-expand-btn,
-            #heatmapConfigPanel, #chartDisplayTypeGroup {
+            body { background: white !important; padding: 0; }
+            .container { max-width: 100%; padding: 0; }
+            .header, .clear-button, .print-btn, .metric-toggle, .upload-area, .tabs, .controls-panel,
+            .button-group, .chart-print-btn, .chart-expand-btn, #heatmapConfigPanel, #chartDisplayTypeGroup,
+            .no-print, input[type="file"], .dashboard-header, #messageArea, .chart-modal {
                 display: none !important;
             }
-            .dashboard { margin: 0; padding: 0; }
-            .tab-content { display: block !important; padding: 0; }
-            .tabs-container { box-shadow: none; }
-            .chart-container, .insight-card, .insight-list { break-inside: avoid; margin-bottom: 20px; box-shadow: none; border: 1px solid #ddd; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #999; padding: 8px; page-break-inside: avoid; position: static !important; background-color: white !important; }
+            .dashboard, .tabs-container { margin: 0; padding: 0; box-shadow: none !important; }
+            .tab-content { display: none !important; padding: 0 !important; }
+            .tab-content.active { display: block !important; }
+            /* One chart per row at full page width; never split a chart across pages */
+            .charts-grid { display: block !important; }
+            .chart-container, .insight-card, .insight-list {
+                break-inside: avoid; page-break-inside: avoid; box-shadow: none !important;
+                border: 1px solid #ddd; margin-bottom: 16px; min-height: 0 !important; transform: none !important;
+            }
+            /* Scale every chart to the page width, keeping proportions, so nothing is clipped */
+            .tab-content.active canvas { width: 100% !important; max-width: 100% !important; height: auto !important; }
+            /* Tables: allow breaks between rows only, repeat headers, drop sticky positioning */
+            th, td { position: static !important; }
             thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-            div[style*="overflow-x"], .heatmap-scroll { overflow: visible !important; max-height: none !important; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
+            div[style*="overflow-x"], .heatmap-scroll, .summary-table-wrap { overflow: visible !important; max-height: none !important; }
+            .chart-title, h2, h3 { break-after: avoid; page-break-after: avoid; }
         }
-
         @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
 
         .date-comparison-note {
@@ -620,21 +632,7 @@
         .summary-table tr.total-row td { background: #eef2ff !important; font-weight: 700; }
         .summary-table tr.total-row td.date-col { background: #e0e7ff !important; }
 
-        @media print {
-            body { background: white; padding: 0; }
-            .container { max-width: 100%; }
-            .dashboard-header { display: none; }
-            .tabs-container { box-shadow: none; }
-            .tabs { display: none; }
-            .tab-content { display: none; }
-            .tab-content.active { display: block; }
-            #heatmapConfigPanel, #heatmapType, select, button:not(.no-print), input[type="file"] { display: none !important; }
-            .chart-title { page-break-inside: avoid; }
-            table { page-break-inside: avoid; }
-            .heatmap-container { page-break-inside: avoid; }
-            .no-print { display: none !important; }
-            div[style*="overflow-x: auto"] { overflow: visible !important; }
-        }
+
     </style>
 </head>
 <body>
@@ -4004,6 +4002,20 @@
             Array.from(rows[1].cells).forEach(th => { th.style.top = h + 'px'; });
         }
         window.addEventListener('resize', pinSummaryHeaderRows);
+
+        // Before printing, redraw charts on the active tab at page width (7.5in at 96dpi) so none are cut off;
+        // restore their normal responsive size afterwards.
+        const PRINT_CHART_W = 700, PRINT_CHART_H = 340;
+        window.addEventListener('beforeprint', () => {
+            Object.values(charts).forEach(ch => {
+                if (ch && ch.canvas && ch.canvas.closest('.tab-content.active') && !ch.canvas.closest('.chart-modal')) {
+                    ch.resize(PRINT_CHART_W, PRINT_CHART_H);
+                }
+            });
+        });
+        window.addEventListener('afterprint', () => {
+            Object.values(charts).forEach(ch => { if (ch && ch.canvas) ch.resize(); });
+        });
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c =>
