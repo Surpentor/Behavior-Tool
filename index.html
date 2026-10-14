@@ -454,7 +454,7 @@
             th, td { border: 1px solid #999; padding: 8px; page-break-inside: avoid; position: static !important; background-color: white !important; }
             thead { display: table-header-group; }
             tr { page-break-inside: avoid; }
-            div[style*="overflow-x"] { overflow: visible !important; }
+            div[style*="overflow-x"], .heatmap-scroll { overflow: visible !important; max-height: none !important; }
         }
 
         @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
@@ -496,6 +496,12 @@
         }
         .comparison-mode-toggle label:hover { background: var(--light-bg); }
 
+        /* Heatmap tables scroll inside a box so the header row and first column stay pinned */
+        .heatmap-scroll { overflow: auto; max-height: 70vh; position: relative; }
+        #heatmap-timeslot, #heatmap-category, #heatmap-timeslot-avg, #heatmap-daily, #sparklines-table { border-collapse: separate !important; border-spacing: 0; }
+        #heatmap-timeslot thead th, #heatmap-category thead th, #heatmap-timeslot-avg thead th, #heatmap-daily thead th, #sparklines-table thead th { position: sticky !important; top: 0; z-index: 20 !important; background: #f1f5f9 !important; }
+        #heatmap-timeslot thead th:first-child, #heatmap-category thead th:first-child, #heatmap-timeslot-avg thead th:first-child, #heatmap-daily thead th:first-child, #sparklines-table thead th:first-child { left: 0; z-index: 30 !important; background: white !important; }
+        #heatmap-timeslot tbody td:first-child, #heatmap-category tbody td:first-child, #heatmap-timeslot-avg tbody td:first-child, #heatmap-daily tbody td:first-child, #sparklines-table tbody td:first-child { position: sticky; left: 0; z-index: 10 !important; }
         .summary-table-wrap {
             overflow-x: auto;
             overflow-y: auto;
@@ -2632,7 +2638,7 @@
                             <span>100%</span>
                         </div>
                     </div>
-                    <div style="overflow-x: auto;">
+                    <div class="heatmap-scroll">
                     <table id="heatmap-timeslot" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2743,7 +2749,7 @@
                             </div>
                         </div>
                     </div>
-                    <div style="overflow-x: auto;">
+                    <div class="heatmap-scroll">
                     <table id="heatmap-category" style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -2918,7 +2924,7 @@
                             <span>100%</span>
                         </div>
                     </div>
-                    <div style="overflow-x: auto;">
+                    <div class="heatmap-scroll">
                     <table id="heatmap-timeslot-avg" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -3019,7 +3025,7 @@
                             </div>
                         </div>
                     </div>
-                    <div style="overflow-x: auto;">
+                    <div class="heatmap-scroll">
                     <table id="heatmap-daily" style="border-collapse: collapse; font-size: 0.85rem; line-height: 1.6;">
                         <thead>
                             <tr>
@@ -3109,7 +3115,7 @@
                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700;">Behavior Patterns Across Time Slots</h3>
                         <button class="chart-print-btn" onclick="printHeatmap('sparklines-table')">🖨️ Print</button>
                     </div>
-                    <div style="overflow-x: auto; min-height: 400px;">
+                    <div class="heatmap-scroll">
                         <table id="sparklines-table" style="border-collapse: collapse; font-size: 0.9rem; line-height: 1.6; min-width: 2400px;">
                             <thead>
                                 <tr>
