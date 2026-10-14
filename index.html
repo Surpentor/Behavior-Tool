@@ -498,15 +498,18 @@
 
         /* Heatmap tables scroll inside a box so the header row and first column stay pinned */
         .heatmap-scroll { overflow: auto; max-height: 70vh; position: relative; }
-        #heatmap-timeslot, #heatmap-category, #heatmap-timeslot-avg, #heatmap-daily, #sparklines-table, #heatmap-bip { border-collapse: separate !important; border-spacing: 0; }
-        #heatmap-timeslot thead th, #heatmap-category thead th, #heatmap-timeslot-avg thead th, #heatmap-daily thead th, #sparklines-table thead th, #heatmap-bip thead th { position: sticky !important; top: 0; z-index: 20 !important; background: #f1f5f9 !important; }
-        #heatmap-timeslot thead th:first-child, #heatmap-category thead th:first-child, #heatmap-timeslot-avg thead th:first-child, #heatmap-daily thead th:first-child, #sparklines-table thead th:first-child, #heatmap-bip thead th:first-child { left: 0; z-index: 30 !important; background: white !important; }
-        #heatmap-timeslot tbody td:first-child, #heatmap-category tbody td:first-child, #heatmap-timeslot-avg tbody td:first-child, #heatmap-daily tbody td:first-child, #sparklines-table tbody td:first-child, #heatmap-bip tbody td:first-child { position: sticky; left: 0; z-index: 10 !important; }
+        #heatmap-timeslot, #heatmap-category, #heatmap-timeslot-avg, #heatmap-daily, #sparklines-table, #heatmap-bip, .bip-heat { border-collapse: separate !important; border-spacing: 0; }
+        #heatmap-timeslot thead th, #heatmap-category thead th, #heatmap-timeslot-avg thead th, #heatmap-daily thead th, #sparklines-table thead th, #heatmap-bip thead th, .bip-heat thead th { position: sticky !important; top: 0; z-index: 20 !important; background: #f1f5f9 !important; }
+        #heatmap-timeslot thead th:first-child, #heatmap-category thead th:first-child, #heatmap-timeslot-avg thead th:first-child, #heatmap-daily thead th:first-child, #sparklines-table thead th:first-child, #heatmap-bip thead th:first-child, .bip-heat thead th:first-child { left: 0; z-index: 30 !important; background: white !important; }
+        #heatmap-timeslot tbody td:first-child, #heatmap-category tbody td:first-child, #heatmap-timeslot-avg tbody td:first-child, #heatmap-daily tbody td:first-child, #sparklines-table tbody td:first-child, #heatmap-bip tbody td:first-child, .bip-heat tbody td:first-child { position: sticky; left: 0; z-index: 10 !important; }
         .bip-heat { font-size: 0.8rem; line-height: 1.6; }
         .bip-heat th { padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 600; color: #334155; font-size: 0.75rem; text-align: center; min-width: 64px; }
         .bip-heat td { padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: 500; min-width: 64px; }
         .bip-heat td:first-child, .bip-heat th:first-child { text-align: left; background: white; min-width: 130px; white-space: nowrap; color: #334155; }
         .bip-heat td.na { background: #94a3b8; }
+        .bip-heat td.cold { color: #cbd5e1; background: #f8fafc; }
+        .hotspot-list { margin: 0; padding-left: 24px; line-height: 1.9; }
+        .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
             overflow-x: auto;
             overflow-y: auto;
@@ -804,6 +807,7 @@
                                 <option value="category-overview">Category Overview — All categories across dates</option>
                                 <option value="timeslot-average">Time Slot Averages — Average performance for each slot</option>
                                 <option value="daily-summary">Daily Summary — Performance by date and category</option>
+                                <option value="bip-hotspots">BIP Hotspots — Where behaviors recur across many dates</option>
                                 <option value="bip-timeslot">BIP by Time of Day — One goal, by slot across dates</option>
                                 <option value="bip-average">BIP Time Slot Averages — Average for each slot, all goals</option>
                                 <option value="bip-daily">BIP Daily Overview — Daily totals for all goals</option>
@@ -2573,7 +2577,23 @@
                 `;
             }
 
-            if (type === 'bip-timeslot') {
+            if (type === 'bip-hotspots') {
+                configPanel.innerHTML = `
+                    <label><strong>Show as a hotspot when the behavior occurred on at least:</strong></label>
+                    <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <select id="hotspotMinRate" onchange="renderBipHotspots()" style="padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                ${[25, 33, 40, 50, 60, 75].map(v => `<option value="${v}" ${v === 50 ? 'selected' : ''}>${v}%</option>`).join('')}
+                            </select> of recorded days
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            and at least
+                            <select id="hotspotMinCount" onchange="renderBipHotspots()" style="padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                ${[2, 3, 4, 5, 8, 10].map(v => `<option value="${v}" ${v === 3 ? 'selected' : ''}>${v}</option>`).join('')}
+                            </select> times
+                        </label>
+                    </div>`;
+            } else if (type === 'bip-timeslot') {
                 configPanel.innerHTML = `
                     <label><strong>BIP goal:</strong></label>
                     <div style="margin: 10px 0 16px;">
@@ -2602,6 +2622,7 @@
                 case 'daily-summary':
                     renderDailySummaryHeatmap();
                     break;
+                case 'bip-hotspots': renderBipHotspots(); break;
                 case 'bip-timeslot': renderBipTimeslotHeatmap(); break;
                 case 'bip-average': renderBipAverageHeatmap(); break;
                 case 'bip-daily': renderBipDailyHeatmap(); break;
@@ -2679,6 +2700,114 @@
                         </table>
                     </div>
                 </div>`;
+        }
+
+        // Hotspots: where a BIP behavior recurs across many dates, instead of every date.
+        // "Occurred" = frequency or duration above 0. Rates use only days where something was recorded.
+        function bipOccurred(f, d) {
+            if ((f === null || f === undefined) && (d === null || d === undefined)) return null;
+            return (f || 0) > 0 || (d || 0) > 0;
+        }
+
+        function renderBipHotspots() {
+            const resultsPanel = document.getElementById('heatmapResults');
+            const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 50) / 100;
+            const minCount = parseInt(document.getElementById('hotspotMinCount')?.value) || 3;
+            const goals = getBipGoalNames();
+            if (goals.length === 0) {
+                resultsPanel.innerHTML = '<div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">No BIP goals found in this file.</div>';
+                return;
+            }
+            const pct = r => Math.round(r * 100) + '%';
+            const hotspots = [];
+
+            // Goal × time slot
+            const slotStats = goals.map(name => SLOT_LABELS.map((_, i) => {
+                let recorded = 0, occurred = 0;
+                filteredDays.forEach(day => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    const o = g ? bipOccurred(g.freqSlots?.[i], g.durSlots?.[i]) : null;
+                    if (o === null) return;
+                    recorded++;
+                    if (o) occurred++;
+                });
+                const rate = recorded ? occurred / recorded : 0;
+                const hot = recorded > 0 && occurred >= minCount && rate >= minRate;
+                if (hot) hotspots.push({ name, where: 'at ' + SLOT_LABELS[i], occurred, recorded, rate });
+                return { recorded, occurred, rate, hot };
+            }));
+            const anySlotData = slotStats.some(r => r.some(c => c.recorded > 0));
+
+            // Overall rate per goal (daily totals) — a weekday only counts as a pattern if it stands out from this
+            const overall = goals.map(name => {
+                let recorded = 0, occurred = 0;
+                filteredDays.forEach(day => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    if (!g) return;
+                    recorded++;
+                    if (bipOccurred(g.frequency, g.duration)) occurred++;
+                });
+                return { recorded, occurred, rate: recorded ? occurred / recorded : 0 };
+            });
+            const STANDOUT = 0.15;
+
+            // Goal × weekday, from daily totals
+            const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            const dayStats = goals.map(name => WEEKDAYS.map((wd, wi) => {
+                let recorded = 0, occurred = 0;
+                filteredDays.forEach(day => {
+                    if (day.date.getDay() !== wi + 1) return;
+                    const g = day.bipGoals.find(x => x.name === name);
+                    if (!g) return;
+                    recorded++;
+                    if (bipOccurred(g.frequency, g.duration)) occurred++;
+                });
+                const rate = recorded ? occurred / recorded : 0;
+                const hot = occurred >= minCount && rate >= minRate && rate - overall[goals.indexOf(name)].rate >= STANDOUT;
+                if (hot) hotspots.push({ name, where: 'on ' + wd + 's', occurred, recorded, rate,
+                    note: `vs ${pct(overall[goals.indexOf(name)].rate)} of all days` });
+                return { recorded, occurred, rate, hot };
+            }));
+
+            hotspots.sort((a, b) => b.rate - a.rate || b.occurred - a.occurred);
+
+            const cell = c => {
+                if (!c.recorded) return '<td class="na"></td>';
+                if (!c.hot) return `<td class="cold" title="${c.occurred} of ${c.recorded} days">${pct(c.rate)}</td>`;
+                const t = (c.rate - minRate) / Math.max(0.01, 1 - minRate);
+                const bg = getBipHeatColor(0.45 + 0.55 * t);
+                return `<td style="background: ${bg}; color: white; font-weight: 700;" title="${c.occurred} of ${c.recorded} days">${pct(c.rate)}</td>`;
+            };
+            const grid = (id, cols, stats) => `
+                <div class="heatmap-scroll">
+                    <table id="${id}" class="bip-heat">
+                        <thead><tr><th>BIP Goal</th>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+                        <tbody>${goals.map((g, gi) => `<tr><td>${escapeHtml(g)}</td>${stats[gi].map(cell).join('')}</tr>`).join('')}</tbody>
+                    </table>
+                </div>`;
+            const card = (title, id, body) => `
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0;">${title}</h3>
+                        ${id ? `<div style="display: flex; gap: 8px;">
+                            <button class="chart-expand-btn" onclick="expandHeatmap('${id}')">⛶</button>
+                            <button class="chart-print-btn" onclick="printHeatmap('${id}')">🖨️ Print</button>
+                        </div>` : ''}
+                    </div>${body}</div>`;
+
+            const list = hotspots.length
+                ? `<ol class="hotspot-list">${hotspots.map(h => `<li><strong>${escapeHtml(h.name)}</strong> ${h.where} — occurred on ${h.occurred} of ${h.recorded} recorded days (${pct(h.rate)})${h.note ? ' — ' + h.note : ''}</li>`).join('')}</ol>`
+                : `<p style="color: var(--text-secondary);">No spots where a behavior occurred on at least ${pct(minRate)} of days and ${minCount}+ times. Try lowering the thresholds above.</p>`;
+
+            const overallLine = `<p class="hotspot-key" style="margin-top: 12px;">Overall: ${goals.map((g, i) =>
+                `${escapeHtml(g)} occurred on ${overall[i].occurred} of ${overall[i].recorded} days (${pct(overall[i].rate)})`).join(' · ')}</p>`;
+            resultsPanel.innerHTML =
+                card(`🔥 Hotspots (${hotspots.length})`, null, list + overallLine) +
+                card('By Time Slot', 'heatmap-bip-hot-slot', anySlotData
+                    ? `<p class="hotspot-key">Colored cells are hotspots: % of recorded days the behavior occurred in that slot. Grey = nothing recorded; faded = below threshold.</p>${grid('heatmap-bip-hot-slot', SLOT_LABELS, slotStats)}`
+                    : '<p style="color: var(--text-secondary);">No time-slot BIP data was recorded, so only day-of-week patterns can be shown.</p>') +
+                card('By Day of Week', 'heatmap-bip-hot-day',
+                    `<p class="hotspot-key">% of recorded days the behavior occurred (from daily totals). A day is colored only when it is at least 15 points above that goal's overall rate.</p>${grid('heatmap-bip-hot-day', WEEKDAYS, dayStats)}`);
         }
 
         // Dates × time slots for one goal
