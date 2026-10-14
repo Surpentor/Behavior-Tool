@@ -498,10 +498,15 @@
 
         /* Heatmap tables scroll inside a box so the header row and first column stay pinned */
         .heatmap-scroll { overflow: auto; max-height: 70vh; position: relative; }
-        #heatmap-timeslot, #heatmap-category, #heatmap-timeslot-avg, #heatmap-daily, #sparklines-table { border-collapse: separate !important; border-spacing: 0; }
-        #heatmap-timeslot thead th, #heatmap-category thead th, #heatmap-timeslot-avg thead th, #heatmap-daily thead th, #sparklines-table thead th { position: sticky !important; top: 0; z-index: 20 !important; background: #f1f5f9 !important; }
-        #heatmap-timeslot thead th:first-child, #heatmap-category thead th:first-child, #heatmap-timeslot-avg thead th:first-child, #heatmap-daily thead th:first-child, #sparklines-table thead th:first-child { left: 0; z-index: 30 !important; background: white !important; }
-        #heatmap-timeslot tbody td:first-child, #heatmap-category tbody td:first-child, #heatmap-timeslot-avg tbody td:first-child, #heatmap-daily tbody td:first-child, #sparklines-table tbody td:first-child { position: sticky; left: 0; z-index: 10 !important; }
+        #heatmap-timeslot, #heatmap-category, #heatmap-timeslot-avg, #heatmap-daily, #sparklines-table, #heatmap-bip { border-collapse: separate !important; border-spacing: 0; }
+        #heatmap-timeslot thead th, #heatmap-category thead th, #heatmap-timeslot-avg thead th, #heatmap-daily thead th, #sparklines-table thead th, #heatmap-bip thead th { position: sticky !important; top: 0; z-index: 20 !important; background: #f1f5f9 !important; }
+        #heatmap-timeslot thead th:first-child, #heatmap-category thead th:first-child, #heatmap-timeslot-avg thead th:first-child, #heatmap-daily thead th:first-child, #sparklines-table thead th:first-child, #heatmap-bip thead th:first-child { left: 0; z-index: 30 !important; background: white !important; }
+        #heatmap-timeslot tbody td:first-child, #heatmap-category tbody td:first-child, #heatmap-timeslot-avg tbody td:first-child, #heatmap-daily tbody td:first-child, #sparklines-table tbody td:first-child, #heatmap-bip tbody td:first-child { position: sticky; left: 0; z-index: 10 !important; }
+        .bip-heat { font-size: 0.8rem; line-height: 1.6; }
+        .bip-heat th { padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 600; color: #334155; font-size: 0.75rem; text-align: center; min-width: 64px; }
+        .bip-heat td { padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: 500; min-width: 64px; }
+        .bip-heat td:first-child, .bip-heat th:first-child { text-align: left; background: white; min-width: 130px; white-space: nowrap; color: #334155; }
+        .bip-heat td.na { background: #94a3b8; }
         .summary-table-wrap {
             overflow-x: auto;
             overflow-y: auto;
@@ -799,6 +804,9 @@
                                 <option value="category-overview">Category Overview — All categories across dates</option>
                                 <option value="timeslot-average">Time Slot Averages — Average performance for each slot</option>
                                 <option value="daily-summary">Daily Summary — Performance by date and category</option>
+                                <option value="bip-timeslot">BIP by Time of Day — One goal, by slot across dates</option>
+                                <option value="bip-average">BIP Time Slot Averages — Average for each slot, all goals</option>
+                                <option value="bip-daily">BIP Daily Overview — Daily totals for all goals</option>
                             </select>
                         </div>
 
@@ -2564,6 +2572,21 @@
                 `;
             }
 
+            if (type === 'bip-timeslot') {
+                configPanel.innerHTML = `
+                    <label><strong>BIP goal:</strong></label>
+                    <div style="margin: 10px 0 16px;">
+                        <select id="bipHeatGoal" onchange="renderBipTimeslotHeatmap()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            ${getBipGoalNames().map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+                        </select>
+                    </div>
+                    ${bipMetricRadios('renderBipTimeslotHeatmap')}`;
+            } else if (type === 'bip-average') {
+                configPanel.innerHTML = bipMetricRadios('renderBipAverageHeatmap');
+            } else if (type === 'bip-daily') {
+                configPanel.innerHTML = bipMetricRadios('renderBipDailyHeatmap');
+            }
+
             // Render appropriate heatmap
             switch(type) {
                 case 'timeslot-comparison':
@@ -2578,7 +2601,142 @@
                 case 'daily-summary':
                     renderDailySummaryHeatmap();
                     break;
+                case 'bip-timeslot': renderBipTimeslotHeatmap(); break;
+                case 'bip-average': renderBipAverageHeatmap(); break;
+                case 'bip-daily': renderBipDailyHeatmap(); break;
             }
+        }
+
+        // ---------- BIP heatmaps ----------
+        // For BIP goals higher = worse, so the scale runs from pale (0 = didn't occur) to dark red (max).
+        // Blank cells (nothing recorded) are grey, distinct from a recorded 0.
+        const BIP_METRICS = {
+            frequency: { label: 'Frequency', slots: 'freqSlots' },
+            duration: { label: 'Duration', slots: 'durSlots' },
+            intensity: { label: 'Intensity', slots: 'intenSlots' }
+        };
+
+        function getBipHeatColor(normalized) {
+            const t = Math.max(0, Math.min(1, normalized));
+            const hue = 55 - t * 55;          // yellow → red
+            const sat = 90;
+            const light = 96 - t * 56;        // near-white → deep red
+            return `hsl(${hue}, ${sat}%, ${light}%)`;
+        }
+
+        function selectedBipMetric() {
+            return document.querySelector('input[name="bipHeatMetric"]:checked')?.value || 'frequency';
+        }
+
+        function bipMetricRadios(onchange) {
+            return `<label><strong>Measure:</strong></label>
+                <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap;">
+                    ${Object.entries(BIP_METRICS).map(([k, m], i) => `
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="bipHeatMetric" value="${k}" ${i === 0 ? 'checked' : ''} onchange="${onchange}()" style="cursor: pointer;">
+                            <span>${m.label}</span>
+                        </label>`).join('')}
+                </div>`;
+        }
+
+        // rows: [{ label, values: [number|null] }], columns: [string]
+        function renderBipHeatTable({ title, rowHeader, columns, rows, decimals = 0, emptyMessage }) {
+            const resultsPanel = document.getElementById('heatmapResults');
+            const all = rows.flatMap(r => r.values).filter(v => v !== null);
+            if (rows.length === 0 || all.length === 0) {
+                resultsPanel.innerHTML = `<div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px; color: var(--text-secondary);">${emptyMessage}</div>`;
+                return;
+            }
+            const max = Math.max(...all, 0);
+            const fmtV = v => decimals ? v.toFixed(decimals) : String(Math.round(v * 10) / 10);
+            const legendStops = [0, 0.5, 1].map(t => ({ t, v: max * t }));
+            const swatch = (bg, text) => `<div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 20px; height: 20px; background: ${bg}; border: 1px solid #ccc;"></div><span>${text}</span></div>`;
+            resultsPanel.innerHTML = `
+                <div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">${escapeHtml(title)}</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="chart-expand-btn" onclick="expandHeatmap('heatmap-bip')">⛶</button>
+                            <button class="chart-print-btn" onclick="printHeatmap('heatmap-bip')">🖨️ Print</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 15px; font-size: 0.85rem; flex-wrap: wrap;">
+                        ${swatch('#94a3b8', 'Not recorded')}
+                        ${legendStops.map(s => swatch(getBipHeatColor(s.t), s.t === 0 ? '0 (did not occur)' : fmtV(s.v) + (s.t === 1 ? ' (highest)' : ''))).join('')}
+                    </div>
+                    <div class="heatmap-scroll">
+                        <table id="heatmap-bip" class="bip-heat">
+                            <thead><tr><th>${escapeHtml(rowHeader)}</th>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+                            <tbody>
+                                ${rows.map(r => `<tr><td>${escapeHtml(r.label)}</td>${r.values.map(v => {
+                                    if (v === null) return '<td class="na"></td>';
+                                    const t = max > 0 ? v / max : 0;
+                                    return `<td style="background: ${getBipHeatColor(t)}; color: ${t > 0.6 ? 'white' : '#1e293b'};">${fmtV(v)}</td>`;
+                                }).join('')}</tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+
+        // Dates × time slots for one goal
+        function renderBipTimeslotHeatmap() {
+            const goal = document.getElementById('bipHeatGoal')?.value;
+            const metric = selectedBipMetric();
+            const slotsKey = BIP_METRICS[metric].slots;
+            const rows = filteredDays.map(day => {
+                const g = day.bipGoals.find(x => x.name === goal);
+                const slots = g && g[slotsKey] ? g[slotsKey] : [];
+                return { label: day.date.toLocaleDateString(), values: SLOT_LABELS.map((_, i) => slots[i] ?? null) };
+            });
+            renderBipHeatTable({
+                title: `${goal || 'BIP'} — ${BIP_METRICS[metric].label} by Time Slot`,
+                rowHeader: 'Date', columns: SLOT_LABELS, rows,
+                emptyMessage: goal
+                    ? `No time-slot ${BIP_METRICS[metric].label.toLowerCase()} data was recorded for this goal. If staff only fill in the daily total, use <strong>BIP Daily Overview</strong> instead.`
+                    : 'No BIP goals found in this file.'
+            });
+        }
+
+        // Goals × time slots, averaged over days where the slot was recorded
+        function renderBipAverageHeatmap() {
+            const metric = selectedBipMetric();
+            const slotsKey = BIP_METRICS[metric].slots;
+            const rows = getBipGoalNames().map(name => ({
+                label: name,
+                values: SLOT_LABELS.map((_, i) => {
+                    let sum = 0, n = 0;
+                    filteredDays.forEach(day => {
+                        const g = day.bipGoals.find(x => x.name === name);
+                        const v = g && g[slotsKey] ? g[slotsKey][i] : null;
+                        if (v !== null && v !== undefined) { sum += v; n++; }
+                    });
+                    return n ? sum / n : null;
+                })
+            }));
+            renderBipHeatTable({
+                title: `Average BIP ${BIP_METRICS[metric].label} by Time Slot`,
+                rowHeader: 'BIP Goal', columns: SLOT_LABELS, rows, decimals: 2,
+                emptyMessage: 'No time-slot BIP data was recorded. If staff only fill in the daily total, use <strong>BIP Daily Overview</strong> instead.'
+            });
+        }
+
+        // Goals × dates, daily totals
+        function renderBipDailyHeatmap() {
+            const metric = selectedBipMetric();
+            const rows = getBipGoalNames().map(name => ({
+                label: name,
+                values: filteredDays.map(day => {
+                    const g = day.bipGoals.find(x => x.name === name);
+                    return g ? (g[metric] || 0) : null;
+                })
+            }));
+            renderBipHeatTable({
+                title: `BIP Daily ${BIP_METRICS[metric].label} Totals`,
+                rowHeader: 'BIP Goal', columns: filteredDays.map(d => d.date.toLocaleDateString()), rows,
+                emptyMessage: 'No BIP goals found in this file.'
+            });
         }
 
         function getHeatmapColor(normalized) {
