@@ -1,75 +1,72 @@
 # Behavior School Data Tool
 
-A web-based tool for analyzing and visualizing behavior tracking data from schools. Built to help educators identify trends, anomalies, and patterns in student behavior.
+A single-page, browser-only tool for analyzing one student's behavior-tracking workbook (.xlsx). It charts trends, time-of-day patterns, BIP goals, custom tracking and heatmaps, and prints reports.
 
-## Features
+**Privacy:** everything runs locally in the browser. The file is never uploaded, and the data is cleared on refresh or close.
 
-✨ **No Data Persistence** - All data is loaded into browser memory and completely cleared when you close the application
+## Running it
 
-📊 **Data Visualization**
-- Interactive charts (printable)
-- Daily trends
-- Category distribution
-- Time-of-day analysis
-- Behavioral comparisons
+The whole app is `index.html`. Open it in any modern browser (double-click, or host it on any static web server such as GitHub Pages). No install or build step.
 
-🔍 **Analysis Tools**
-- Trend detection (improving/declining/stable)
-- Anomaly detection with severity levels
-- Statistical analysis
-- Discrepancy flagging
+Needs internet access to load two libraries from jsDelivr:
+- [SheetJS](https://sheetjs.com/) `xlsx@0.18.5` (reads the workbook)
+- [Chart.js](https://www.chartjs.org/) `4.4.0` (charts)
 
-📁 **File Format Support**
-- Excel (.xls, .xlsx)
-- CSV/TSV
-- LibreOffice (.ods)
-- HTML tables
-- PDF (via text extraction)
+## Using it
 
-🎯 **Features**
-- Single-student data analysis
-- Flexible date range filtering (all data, last 7/30/90 days, custom)
-- Multi-category behavioral tracking
-- Detailed data tables with search and sort
-- Printable reports and charts
+1. Click the upload area and choose the student's workbook.
+2. Browse the tabs:
+   - **Insights** – overall average trend (peaks/valleys highlighted) and category averages
+   - **Categories** – per-category trend and performance charts
+   - **Time-of-Day** – average score per time slot
+   - **BIP Goals** – frequency, duration and intensity per goal
+   - **Custom Tracking** – the three free-form tracking rows
+   - **Heatmap** – time-slot, category, average and daily-summary heatmaps
+   - **Date Comparison** – compare chosen days side by side
+   - **Summary Table** – per-day table, exportable to CSV
+   - **Settings** – date range filter, fix a single day's date, show/hide tracking rows, data-quality notes
+3. Use **expand** or **print** on any chart, or print the full report/summary.
 
-## Installation
+## Expected workbook layout
 
-```bash
-npm install
-```
+- **One sheet per month**, named with the month (e.g. `January`, `Sept 2024`). Sheets named `Master` or `Overall Summary` are skipped.
+- **Row 1:** student name in A1, location in B1.
+- **Each day is a 22-row block** starting with the date in column A:
 
-## Development
+| Block row | Content |
+|---|---|
+| 0 | Date |
+| 1–4 | Categories: Complete Work · Hands, Body, Objects to self · Stay in Designated area · App. language/conversations |
+| 7–9 | Three custom tracking rows (label in A, total in column AA) |
+| 10–21 | BIP goal sections: a row containing "BIP", followed by frequency, duration and intensity rows (totals in column AA) |
 
-```bash
-npm run dev
-```
+- **Time slots** are columns B–Z (25 slots). Blank cells mean "no data for that slot". A category's daily percentage is points ÷ slots with data × 100.
+- A row in column A starting with "Monthly report" ends that sheet's daily data.
 
-The application will open in your browser at `http://localhost:5173`
+### Date formats
 
-## Building
+The date cell can be a real Excel date or text in almost any common format:
 
-```bash
-npm run build
-```
+`1/5/2025` · `01-05-25` · `1.5.2025` · `1/5` · `2025-01-05` · `2025/1/5` · `Jan 5 2025` · `January 5th, 2025` · `Sept. 5, 2024` · `5 Jan 2025` · `5-Jan-25` · `Monday, January 5, 2025` · `Mon 1/5/25` · trailing times like `8:00 AM` are ignored.
 
-## How to Use
+Numeric dates are read month-first (US). If the first number is over 12 (e.g. `25/12/2024`), it is read day-first. Impossible dates like `2/30/2025` are rejected. A date without a year gets the current year, then the correction below applies.
 
-1. **Load Data**: Click the upload area and select your exported behavior tracking file
-2. **Analyze**: View key metrics, trends, and anomalies
-3. **Filter**: Use date ranges and category filters to focus your analysis
-4. **Visualize**: View interactive charts showing behavioral patterns
-5. **Export**: Print individual charts or the entire report
+### Automatic date corrections
 
-## Data Format
+Typos in dates are fixed automatically and listed under **Settings → Data Quality Issues**:
+- If a date's month doesn't match its sheet's month, the month is changed to the sheet's.
+- If a date's year differs from the year used by most of the sheet, the year is changed to match.
 
-The tool expects exported data with the following structure:
-- Student name and location in the first rows
-- Behavioral categories (Complete Work, Hands/Body/Objects to self, Stay in Designated area, Language/Conversations)
-- Time slots as columns
-- Point values in the data cells
-- Support for BIP Goals and additional tracking sections
+## Code map (`index.html`)
 
-## Privacy
-
-This tool processes all data locally in your browser. No data is saved to any server or stored between sessions. When you close the browser or refresh the page, all loaded data is cleared.
+| Function | Purpose |
+|---|---|
+| `handleFileUpload` / `parseMultiSheetXlsx` | Read workbook, walk sheets, apply date corrections, drop BIP goals and tracking rows with no activity |
+| `toDate`, `monthFromName`, `parseMonthFromSheetName` | Date and month recognition |
+| `parseDayBlock` | Parse one 22-row day block |
+| `initializeDashboard`, `buildDynamicCharts`, `refreshCharts` | Build the dashboard after loading |
+| `update*Chart`, `updateInsights` | Chart rendering per tab |
+| `render*Heatmap`, `generateHeatmapView` | Heatmaps |
+| `renderComparison` | Date comparison tab |
+| `updateSummaryTable`, `exportSummaryCsv` | Summary table and CSV |
+| `printChart`, `printFullReport`, `printFullSummary` | Printing |

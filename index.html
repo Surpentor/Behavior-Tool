@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Behavior School Data Tool - XLSX Optimized</title>
+    <title>Behavior School Data Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <style>
@@ -1173,32 +1173,94 @@
             };
         }
 
+        // Normalizes any date-like cell value to a local-midnight Date, or null.
+        // Accepts: Date objects, Excel serial numbers, and text such as
+        // 1/5/2025, 01-05-25, 2025-01-05, 2025/1/5, 1.5.2025, 1/5 (no year),
+        // Jan 5 2025, January 5th, 2025, 5 Jan 2025, 5-Jan-25,
+        // Monday, January 5, 2025, and Mon 1/5/25. Numeric dates are read
+        // month-first (US); if the first number is > 12 it is read day-first.
         function toDate(val) {
             if (val instanceof Date) {
-                return isNaN(val.getTime()) ? null : val;
+                if (isNaN(val.getTime())) return null;
+                // SheetJS dates can drift a few minutes before midnight; snap those forward.
+                const r = val.getHours() === 23 ? new Date(val.getTime() + 3600 * 1000) : val;
+                return makeDate(r.getFullYear(), r.getMonth(), r.getDate());
             }
-            if (typeof val === 'number' && val > 0 && val < 100000) {
-                const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-                return isNaN(d.getTime()) ? null : d;
+            if (typeof val === 'number') {
+                if (!(val > 0 && val < 100000)) return null;
+                const utc = new Date(Math.round((Math.floor(val) - 25569) * 86400 * 1000));
+                return makeDate(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
             }
-            if (typeof val === 'string') {
-                const s = val.trim();
-                if (s && /\d/.test(s) && /[\/\-]/.test(s)) {
-                    const d = new Date(s);
-                    return isNaN(d.getTime()) ? null : d;
-                }
+            if (typeof val !== 'string') return null;
+
+            let s = val.trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!s || !/\d/.test(s)) return null;
+            // Drop a leading weekday ("monday, ", "mon ", "tues. ") and trailing time.
+            s = s.replace(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,? ?/, '');
+            s = s.replace(/[ t]\d{1,2}:\d{2}(:\d{2})?(\.\d+)?( ?[ap]\.?m\.?)?(z|[+-]\d{2}:?\d{2})?$/, '').trim();
+
+            let m;
+            // Excel serial stored as text
+            if ((m = s.match(/^(\d{5})(\.\d+)?$/))) return toDate(parseFloat(s));
+            // Year first: 2025-01-05, 2025/1/5, 2025.01.05
+            if ((m = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/))) {
+                return makeDate(+m[1], +m[2] - 1, +m[3]);
+            }
+            // Numeric: m/d/y, m-d-y, m.d.y, m/d (year optional, 2 or 4 digits)
+            if ((m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2}|\d{4}))?$/))) {
+                let a = +m[1], b = +m[2];
+                let month = a, day = b;
+                if (a > 12 && b <= 12) { month = b; day = a; }
+                return makeDate(fullYear(m[3]), month - 1, day);
+            }
+            // Month name first: jan 5 2025, january 5th, 2025, jan-5-25, sept. 5
+            if ((m = s.match(/^([a-z]+)\.?[ \-\/,]*(\d{1,2})(?:st|nd|rd|th)?(?:[ ,\-\/]+(\d{2}|\d{4}))?$/))) {
+                const month = monthFromName(m[1]);
+                if (month === null) return null;
+                return makeDate(fullYear(m[3]), month, +m[2]);
+            }
+            // Day first: 5 jan 2025, 5-jan-25, 5th of january, 2025
+            if ((m = s.match(/^(\d{1,2})(?:st|nd|rd|th)?[ \-\/]*(?:of )?([a-z]+)\.?(?:[ ,\-\/]+(\d{2}|\d{4}))?$/))) {
+                const month = monthFromName(m[2]);
+                if (month === null) return null;
+                return makeDate(fullYear(m[3]), month, +m[1]);
+            }
+            return null;
+        }
+
+        function fullYear(y) {
+            if (y === undefined || y === null || y === '') return new Date().getFullYear();
+            const n = +y;
+            return y.length === 2 ? 2000 + n : n;
+        }
+
+        // Builds a local date, rejecting impossible values like 2/30 or 13/40.
+        function makeDate(year, month, day) {
+            if (month < 0 || month > 11 || day < 1 || day > 31 || year < 1990 || year > 2200) return null;
+            const d = new Date(year, month, day);
+            if (d.getMonth() !== month || d.getDate() !== day) return null;
+            return d;
+        }
+
+        function monthFromName(name) {
+            const n = String(name).toLowerCase().replace(/\./g, '');
+            const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            if (n === 'sept') return 8;
+            const full = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+                'august', 'september', 'october', 'november', 'december'];
+            for (let i = 0; i < 12; i++) {
+                if (n.length >= 3 && full[i].startsWith(n)) return i;
             }
             return null;
         }
 
         function parseMonthFromSheetName(name) {
-            const months = {
-                'January': 0, 'Jan': 0, 'February': 1, 'Feb': 1, 'March': 2, 'Mar': 2,
-                'April': 3, 'Apr': 3, 'May': 4, 'June': 5, 'Jun': 5, 'July': 6, 'Jul': 6,
-                'August': 7, 'Aug': 7, 'September': 8, 'Sep': 8, 'Septemb': 8,
-                'October': 9, 'Oct': 9, 'November': 10, 'Nov': 10, 'December': 11, 'Dec': 11
-            };
-            return months[name] !== undefined ? months[name] : null;
+            const words = String(name).trim().split(/[\s_\-.,]+/);
+            for (const w of words) {
+                const m = monthFromName(w);
+                if (m !== null) return m;
+            }
+            return null;
         }
 
         function parseDayBlock(sheetData, startRow, sheetName) {
