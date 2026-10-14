@@ -1,4 +1,4 @@
-# Behavior School Data Tool
+# Behavior Visualization Tool
 
 A single-page, browser-only tool for analyzing one student's behavior-tracking workbook (.xlsx). It charts trends, time-of-day patterns, BIP goals, custom tracking and heatmaps, and prints reports.
 
