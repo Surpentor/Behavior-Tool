@@ -408,6 +408,12 @@
             font-size: 1.7rem; font-weight: 800; color: var(--text-primary);
             margin: 6px 0; line-height: 1.2;
         }
+        .top-slot { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+        .top-slot-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--primary-color); color: white;
+            font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+        .top-slot:nth-of-type(n+2) .top-slot-rank { opacity: 0.75; }
+        .top-slot-name { font-weight: 700; font-size: 1.1rem; color: var(--text-primary); }
+        .top-slot-avg { margin-left: auto; color: var(--text-secondary); font-size: 0.9rem; }
         .insight-card .insight-detail { font-size: 0.9rem; color: var(--text-secondary); }
         .insights-section-title {
             font-size: 1.2rem; font-weight: 700; color: var(--text-primary);
@@ -4226,9 +4232,13 @@
                         if (cd && cd.slots && cd.slots[slot] != null) { sum += cd.slots[slot]; count++; }
                     });
                 });
-                slotAvgs.push(count > 0 ? sum / count : 0);
+                slotAvgs.push(count > 0 ? sum / count : null);
             }
-            const bestSlotIdx = slotAvgs.indexOf(Math.max(...slotAvgs));
+            // Top 3 time slots, ignoring slots with no data
+            const topSlots = slotAvgs.map((avg, idx) => ({ idx, avg }))
+                .filter(x => x.avg !== null)
+                .sort((a, b) => b.avg - a.avg || a.idx - b.idx)
+                .slice(0, 3);
 
             // Per-category averages and trends (only counting days with data)
             const catInsights = allCategoryNames.map(cat => {
@@ -4300,9 +4310,13 @@
 
             html += `<div class="insight-card">
                 <div class="insight-icon">⏰</div>
-                <div class="insight-label">Best Time Slot</div>
-                <div class="insight-value">${SLOT_LABELS[bestSlotIdx]}</div>
-                <div class="insight-detail">Avg ${fmt(slotAvgs[bestSlotIdx])} pts across all days</div>
+                <div class="insight-label">Top 3 Time Slots</div>
+                ${topSlots.length ? topSlots.map((t, i) => `<div class="top-slot">
+                    <span class="top-slot-rank">${i + 1}</span>
+                    <span class="top-slot-name">${SLOT_LABELS[t.idx]}</span>
+                    <span class="top-slot-avg">${t.avg.toFixed(2)} pts</span>
+                </div>`).join('') : '<div class="insight-detail">No time-slot data</div>'}
+                <div class="insight-detail">Avg points per slot, all categories</div>
             </div>`;
 
             html += `<div class="insight-card">
