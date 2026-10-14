@@ -511,6 +511,9 @@
         .hotspot-list { margin: 0; padding-left: 24px; line-height: 1.9; columns: 2; column-gap: 40px; }
         .hotspot-list li { break-inside: avoid; }
         @media (max-width: 800px) { .hotspot-list { columns: 1; } }
+        .hotspot-help { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.9rem; line-height: 1.6; color: #1e293b; }
+        .hotspot-help p, .hotspot-help ul, .hotspot-help ol { margin: 4px 0 10px; }
+        .hotspot-help ul, .hotspot-help ol { padding-left: 22px; }
         .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
             overflow-x: auto;
@@ -2581,20 +2584,36 @@
 
             if (type === 'bip-hotspots') {
                 configPanel.innerHTML = `
-                    <label><strong>Show as a hotspot when the behavior occurred on at least:</strong></label>
+                    <div class="hotspot-help">
+                        <strong>🔥 What this shows</strong>
+                        <p>Instead of listing every date, this finds the <strong>times of day</strong> and <strong>days of the week</strong> when each BIP behavior keeps happening across many dates.</p>
+                        <ul>
+                            <li><strong>Time slots:</strong> looks only at the days the behavior happened, and asks “on how many of those days did it happen at this time?” Example: <em>happened at 10:40 on 6 of the 10 days it occurred (60%)</em>.</li>
+                            <li><strong>Days of the week:</strong> uses each day's totals. Example: <em>occurred on 4 of 5 Mondays (80%), compared with 30% of all days</em>.</li>
+                            <li>An empty time-slot cell counts as “didn't happen”.</li>
+                        </ul>
+                        <strong>How to use it</strong>
+                        <ol>
+                            <li>Set the date range on the Settings tab (or in the header) — only those days are counted.</li>
+                            <li>Pick how strong a pattern must be below. Lower settings show more possible patterns; higher settings show only the strongest.</li>
+                            <li>Read the two grids, then the ranked list at the bottom. Hover a cell to see the exact day counts.</li>
+                        </ol>
+                    </div>
+                    <label><strong>Count something as a hotspot when it happened on at least:</strong></label>
                     <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-                        <label style="display: flex; align-items: center; gap: 8px;">
-                            <select id="hotspotMinRate" onchange="renderBipHotspots()" style="padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                                ${[25, 33, 40, 50, 60, 75].map(v => `<option value="${v}" ${v === 50 ? 'selected' : ''}>${v}%</option>`).join('')}
-                            </select> of recorded days
+                        <label style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                            <select id="hotspotMinRate" onchange="renderBipHotspots()" style="width: auto; padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                ${[25, 33, 40, 50, 60, 75].map(v => `<option value="${v}" ${v === 33 ? 'selected' : ''}>${v}%</option>`).join('')}
+                            </select> of the days
                         </label>
-                        <label style="display: flex; align-items: center; gap: 8px;">
-                            and at least
-                            <select id="hotspotMinCount" onchange="renderBipHotspots()" style="padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                        <label style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                            and on at least
+                            <select id="hotspotMinCount" onchange="renderBipHotspots()" style="width: auto; padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px;">
                                 ${[2, 3, 4, 5, 8, 10].map(v => `<option value="${v}" ${v === 3 ? 'selected' : ''}>${v}</option>`).join('')}
-                            </select> times
+                            </select> different days
                         </label>
-                    </div>`;
+                    </div>
+                    <p class="hotspot-key" style="margin-top: 8px;">The minimum number of days keeps one-off coincidences (like 2 out of 2) from showing up as patterns.</p>`;
             } else if (type === 'bip-timeslot') {
                 configPanel.innerHTML = `
                     <label><strong>BIP goal:</strong></label>
@@ -2713,7 +2732,7 @@
 
         function renderBipHotspots() {
             const resultsPanel = document.getElementById('heatmapResults');
-            const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 50) / 100;
+            const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 33) / 100;
             const minCount = parseInt(document.getElementById('hotspotMinCount')?.value) || 3;
             const goals = getBipGoalNames();
             if (goals.length === 0) {
@@ -2723,22 +2742,22 @@
             const pct = r => Math.round(r * 100) + '%';
             const hotspots = [];
 
-            // Goal × time slot
-            const slotStats = goals.map(name => SLOT_LABELS.map((_, i) => {
-                let recorded = 0, occurred = 0;
-                filteredDays.forEach(day => {
-                    const g = day.bipGoals.find(x => x.name === name);
-                    const o = g ? bipOccurred(g.freqSlots?.[i], g.durSlots?.[i]) : null;
-                    if (o === null) return;
-                    recorded++;
-                    if (o) occurred++;
+            // Goal × time slot. Staff typically fill a slot only when the behavior happens, so a blank
+            // slot counts as "didn't happen". Rate = days it happened in this slot ÷ days it happened at all.
+            const occurredOn = (g) => g && (bipOccurred(g.frequency, g.duration) ||
+                (g.freqSlots || []).some(v => v > 0) || (g.durSlots || []).some(v => v > 0));
+            const slotStats = goals.map(name => {
+                const occDays = filteredDays.map(day => day.bipGoals.find(x => x.name === name)).filter(occurredOn);
+                return SLOT_LABELS.map((_, i) => {
+                    const recorded = occDays.length;
+                    const occurred = occDays.filter(g => (g.freqSlots?.[i] || 0) > 0 || (g.durSlots?.[i] || 0) > 0).length;
+                    const rate = recorded ? occurred / recorded : 0;
+                    const hot = occurred >= minCount && rate >= minRate;
+                    if (hot) hotspots.push({ name, kind: 'slot', where: SLOT_LABELS[i], occurred, recorded, rate });
+                    return { recorded, occurred, rate, hot };
                 });
-                const rate = recorded ? occurred / recorded : 0;
-                const hot = recorded > 0 && occurred >= minCount && rate >= minRate;
-                if (hot) hotspots.push({ name, where: 'at ' + SLOT_LABELS[i], occurred, recorded, rate });
-                return { recorded, occurred, rate, hot };
-            }));
-            const anySlotData = slotStats.some(r => r.some(c => c.recorded > 0));
+            });
+            const anySlotData = filteredDays.some(d => d.bipGoals.some(g => (g.freqSlots || []).some(v => v !== null) || (g.durSlots || []).some(v => v !== null)));
 
             // Overall rate per goal (daily totals) — a weekday only counts as a pattern if it stands out from this
             const overall = goals.map(name => {
@@ -2766,15 +2785,15 @@
                 });
                 const rate = recorded ? occurred / recorded : 0;
                 const hot = occurred >= minCount && rate >= minRate && rate - overall[goals.indexOf(name)].rate >= STANDOUT;
-                if (hot) hotspots.push({ name, where: 'on ' + wd + 's', occurred, recorded, rate,
-                    note: `vs ${pct(overall[goals.indexOf(name)].rate)} of all days` });
+                if (hot) hotspots.push({ name, kind: 'day', where: wd + 's', occurred, recorded, rate,
+                    note: `compared with ${pct(overall[goals.indexOf(name)].rate)} of all days` });
                 return { recorded, occurred, rate, hot };
             }));
 
             hotspots.sort((a, b) => b.rate - a.rate || b.occurred - a.occurred);
 
             const cell = c => {
-                if (!c.recorded) return '<td class="na"></td>';
+                if (!c.recorded) return '<td class="na" title="Behavior did not occur in this date range"></td>';
                 if (!c.hot) return `<td class="cold" title="${c.occurred} of ${c.recorded} days">${pct(c.rate)}</td>`;
                 const t = (c.rate - minRate) / Math.max(0.01, 1 - minRate);
                 const bg = getBipHeatColor(0.45 + 0.55 * t);
@@ -2798,18 +2817,20 @@
                     </div>${body}</div>`;
 
             const list = hotspots.length
-                ? `<ol class="hotspot-list">${hotspots.map(h => `<li><strong>${escapeHtml(h.name)}</strong> ${h.where} — occurred on ${h.occurred} of ${h.recorded} recorded days (${pct(h.rate)})${h.note ? ' — ' + h.note : ''}</li>`).join('')}</ol>`
-                : `<p style="color: var(--text-secondary);">No spots where a behavior occurred on at least ${pct(minRate)} of days and ${minCount}+ times. Try lowering the thresholds above.</p>`;
+                ? `<ol class="hotspot-list">${hotspots.map(h => h.kind === 'slot'
+                    ? `<li><strong>${escapeHtml(h.name)}</strong> at <strong>${h.where}</strong> — happened in this slot on ${h.occurred} of the ${h.recorded} days it occurred (${pct(h.rate)})</li>`
+                    : `<li><strong>${escapeHtml(h.name)}</strong> on <strong>${h.where}</strong> — occurred on ${h.occurred} of ${h.recorded} ${h.where} (${pct(h.rate)}), ${h.note}</li>`).join('')}</ol>`
+                : `<p style="color: var(--text-secondary);">Nothing met the current settings. Try a lower percentage or a smaller minimum number of days at the top.</p>`;
 
             const overallLine = `<p class="hotspot-key" style="margin-top: 12px;">Overall: ${goals.map((g, i) =>
                 `${escapeHtml(g)} occurred on ${overall[i].occurred} of ${overall[i].recorded} days (${pct(overall[i].rate)})`).join(' · ')}</p>`;
             resultsPanel.innerHTML =
-                card('By Time Slot', 'heatmap-bip-hot-slot', anySlotData
-                    ? `<p class="hotspot-key">Colored cells are hotspots: % of recorded days the behavior occurred in that slot. Grey = nothing recorded; faded = below threshold.</p>${grid('heatmap-bip-hot-slot', SLOT_LABELS, slotStats)}`
+                card('Which time slots?', 'heatmap-bip-hot-slot', anySlotData
+                    ? `<p class="hotspot-key"><strong>What the numbers mean:</strong> of the days each behavior happened, the % of those days it happened in that time slot. <strong>Colored</strong> = hotspot (meets your settings) · <strong>faded</strong> = below your settings · <strong>grey</strong> = the behavior never happened in this date range.</p>${grid('heatmap-bip-hot-slot', SLOT_LABELS, slotStats)}`
                     : '<p style="color: var(--text-secondary);">No time-slot BIP data was recorded, so only day-of-week patterns can be shown.</p>') +
-                card('By Day of Week', 'heatmap-bip-hot-day',
-                    `<p class="hotspot-key">% of recorded days the behavior occurred (from daily totals). A day is colored only when it is at least 15 points above that goal's overall rate.</p>${grid('heatmap-bip-hot-day', WEEKDAYS, dayStats)}`) +
-                card(`🔥 Hotspots (${hotspots.length})`, null, list + overallLine);
+                card('Which days of the week?', 'heatmap-bip-hot-day',
+                    `<p class="hotspot-key"><strong>What the numbers mean:</strong> the % of those weekdays the behavior happened at all (e.g. 4 of 5 Mondays = 80%). A weekday is <strong>colored</strong> only when it meets your settings <em>and</em> is at least 15 points above that behavior's rate across all days — so a behavior that happens every day doesn't light up every weekday.</p>${grid('heatmap-bip-hot-day', WEEKDAYS, dayStats)}`) +
+                card(`🔥 Hotspots found (${hotspots.length}) — strongest first`, null, list + overallLine);
         }
 
         // Dates × time slots for one goal
