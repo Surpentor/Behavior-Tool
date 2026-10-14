@@ -29,7 +29,7 @@ Needs internet access to load two libraries from jsDelivr:
 
 ## Full report
 
-**Print Full Report** opens a dialog where you choose which sections to include: overview, overall trend, category charts, time-of-day, BIP goals, custom tracking, day-by-day table and data-quality notes. The report uses the current date filter and is laid out for US Letter (8.5×11, portrait, 0.5in margins):
+**Print Full Report** opens a dialog where you choose which sections to include: overview (with top 3 time slots), overall trend, category charts, time-of-day, BIP goals, BIP patterns (hotspot list and grids, using the thresholds set on the Hotspots view), custom tracking, day-by-day table (with totals) and data-quality notes. The report uses the current date filter and is laid out for US Letter (8.5×11, portrait, 0.5in margins):
 
 - Every chart is re-drawn at a fixed print size and high resolution, including charts on tabs you haven't opened. About two charts fit on each page.
 - A chart is never split across pages. If it doesn't fit, it moves to the next page.

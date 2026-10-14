@@ -2730,15 +2730,9 @@
             return (f || 0) > 0 || (d || 0) > 0;
         }
 
-        function renderBipHotspots() {
-            const resultsPanel = document.getElementById('heatmapResults');
-            const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 33) / 100;
-            const minCount = parseInt(document.getElementById('hotspotMinCount')?.value) || 3;
+        // Pattern detection shared by the Hotspots heatmap and the full report.
+        function computeBipHotspots(minRate, minCount) {
             const goals = getBipGoalNames();
-            if (goals.length === 0) {
-                resultsPanel.innerHTML = '<div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">No BIP goals found in this file.</div>';
-                return;
-            }
             const pct = r => Math.round(r * 100) + '%';
             const hotspots = [];
 
@@ -2791,6 +2785,20 @@
             }));
 
             hotspots.sort((a, b) => b.rate - a.rate || b.occurred - a.occurred);
+            return { goals, slotStats, dayStats, overall, hotspots, anySlotData, WEEKDAYS };
+        }
+
+        function renderBipHotspots() {
+            const resultsPanel = document.getElementById('heatmapResults');
+            const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 33) / 100;
+            const minCount = parseInt(document.getElementById('hotspotMinCount')?.value) || 3;
+            const goals = getBipGoalNames();
+            if (goals.length === 0) {
+                resultsPanel.innerHTML = '<div style="padding: 20px; background: white; border-radius: 8px; margin-top: 20px;">No BIP goals found in this file.</div>';
+                return;
+            }
+            const pct = r => Math.round(r * 100) + '%';
+            const { slotStats, dayStats, overall, hotspots, anySlotData, WEEKDAYS } = computeBipHotspots(minRate, minCount);
 
             const cell = c => {
                 if (!c.recorded) return '<td class="na" title="Behavior did not occur in this date range"></td>';
@@ -4853,6 +4861,7 @@
             { id: 'categories', label: 'Category charts' },
             { id: 'timeofday', label: 'Time-of-day chart' },
             { id: 'bip', label: 'BIP goal charts' },
+            { id: 'bippatterns', label: 'BIP patterns (hotspots)' },
             { id: 'tracking', label: 'Custom tracking charts' },
             { id: 'table', label: 'Day-by-day table' },
             { id: 'quality', label: 'Data quality notes' }
@@ -4994,6 +5003,18 @@
                 td:first-child, th:first-child { text-align: left; white-space: nowrap; }
                 tr.avg-row td { font-weight: 700; background: #ecfdf5 !important; border-top: 2px solid #10b981; }
                 tr.total-row td { font-weight: 700; background: #eef2ff !important; }
+.top-slots { margin-top: 8px; display: flex; gap: 18px; flex-wrap: wrap; }
+                .top-slots em { color: #64748b; font-style: normal; }
+                .note { color: #64748b; font-size: 8.5pt; margin: 4px 0 8px; }
+                h3.sub { font-size: 9.5pt; margin: 10px 0 4px; color: #334155; break-after: avoid; }
+                .hs-list { padding-left: 20px; columns: 2; column-gap: 24px; font-size: 9pt; line-height: 1.6; }
+                .hs-list li { break-inside: avoid; }
+                table.hs-grid { width: auto; font-size: 7.5pt; }
+                table.hs-grid th, table.hs-grid td { text-align: center; padding: 2px 4px; }
+                table.hs-grid td:first-child, table.hs-grid th:first-child { text-align: left; }
+                td.hs-hot { background: #dc2626 !important; color: white; font-weight: 700; }
+                td.hs-cold { color: #94a3b8; }
+                td.hs-na { background: #cbd5e1 !important; }
                 .dq-item { padding: 5px 8px; border-left: 3px solid #f59e0b; background: #fffbeb; margin-bottom: 5px; break-inside: avoid; }
                 @media screen { body { padding: 0.5in 0; } }
             </style></head><body>`;
@@ -5016,6 +5037,17 @@
                         <div class="cat-bar"><div class="cat-bar-fill" style="width: ${Math.min(100, avg).toFixed(1)}%; background: ${color};"></div></div>
                         <span style="font-weight: 700; color: ${color}; min-width: 0.6in; text-align: right;">${avg.toFixed(1)}%</span></div>`;
                 });
+                const slotAvg = SLOT_LABELS.map((_, i) => {
+                    let sum = 0, n = 0;
+                    days.forEach(d => Object.values(d.categories || {}).forEach(cd => {
+                        if (cd && cd.slots && cd.slots[i] != null) { sum += cd.slots[i]; n++; }
+                    }));
+                    return n ? { i, avg: sum / n } : null;
+                }).filter(Boolean).sort((a, b) => b.avg - a.avg || a.i - b.i).slice(0, 3);
+                if (slotAvg.length) {
+                    body += `</div><div class="keep top-slots"><strong>Top time slots:</strong> ${slotAvg.map((t, k) =>
+                        `<span>${k + 1}. ${SLOT_LABELS[t.i]} <em>(${t.avg.toFixed(2)} pts)</em></span>`).join('')}`;
+                }
                 html += section('Overview', body + '</div>');
             }
 
@@ -5037,6 +5069,32 @@
                     body += chartBox(key, name);
                 });
                 html += section('BIP Goals', body);
+            }
+            if (chosen.has('bippatterns') && getBipGoalNames().length) {
+                const minRate = (parseInt(document.getElementById('hotspotMinRate')?.value) || 33) / 100;
+                const minCount = parseInt(document.getElementById('hotspotMinCount')?.value) || 3;
+                const hs = computeBipHotspots(minRate, minCount);
+                const pct = r => Math.round(r * 100) + '%';
+                const cell = c => !c.recorded ? '<td class="hs-na"></td>'
+                    : `<td class="${c.hot ? 'hs-hot' : 'hs-cold'}">${pct(c.rate)}</td>`;
+                // Only time slots where some behavior happened, so the grid fits the page width
+                const slotCols = SLOT_LABELS.map((l, i) => i).filter(i => hs.slotStats.some(r => r[i].occurred > 0));
+                let body = `<p class="note">Hotspot = happened on at least ${pct(minRate)} of the days and on ${minCount}+ different days.
+                    Time-slot %: of the days the behavior happened, the share where it happened in that slot (blank slot = didn't happen).
+                    Weekday %: share of those weekdays it happened; flagged only if 15+ points above its rate across all days.</p>`;
+                body += hs.hotspots.length
+                    ? `<ol class="hs-list keep">${hs.hotspots.map(h => h.kind === 'slot'
+                        ? `<li><strong>${escapeHtml(h.name)}</strong> at <strong>${h.where}</strong> — ${h.occurred} of the ${h.recorded} days it occurred (${pct(h.rate)})</li>`
+                        : `<li><strong>${escapeHtml(h.name)}</strong> on <strong>${h.where}</strong> — ${h.occurred} of ${h.recorded} ${h.where} (${pct(h.rate)}), ${h.note}</li>`).join('')}</ol>`
+                    : '<p class="note keep">No hotspots met these settings.</p>';
+                if (hs.anySlotData && slotCols.length) {
+                    body += `<div class="keep"><h3 class="sub">Which time slots?</h3><table class="hs-grid"><thead><tr><th>BIP Goal</th>${slotCols.map(i => `<th>${SLOT_LABELS[i]}</th>`).join('')}</tr></thead><tbody>
+                        ${hs.goals.map((g, gi) => `<tr><td>${escapeHtml(g)}</td>${slotCols.map(i => cell(hs.slotStats[gi][i])).join('')}</tr>`).join('')}</tbody></table></div>`;
+                }
+                body += `<div class="keep"><h3 class="sub">Which days of the week?</h3><table class="hs-grid"><thead><tr><th>BIP Goal</th>${hs.WEEKDAYS.map(w => `<th>${w}</th>`).join('')}</tr></thead><tbody>
+                    ${hs.goals.map((g, gi) => `<tr><td>${escapeHtml(g)}</td>${hs.dayStats[gi].map(cell).join('')}</tr>`).join('')}</tbody></table></div>`;
+                body += `<p class="note">Overall: ${hs.goals.map((g, i) => `${escapeHtml(g)} occurred on ${hs.overall[i].occurred} of ${hs.overall[i].recorded} days (${pct(hs.overall[i].rate)})`).join(' · ')}</p>`;
+                html += section('BIP Patterns', body);
             }
             if (chosen.has('tracking')) {
                 let body = '';
