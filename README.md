@@ -25,7 +25,18 @@ Needs internet access to load two libraries from jsDelivr:
    - **Date Comparison** – compare chosen days side by side
    - **Summary Table** – per-day table, exportable to CSV
    - **Settings** – date range filter, fix a single day's date, show/hide tracking rows, data-quality notes
-3. Use **expand** or **print** on any chart, or print the full report/summary.
+3. Use **expand** or **print** on any chart, or **Print Full Report** (see below).
+
+## Full report
+
+**Print Full Report** opens a dialog where you choose which sections to include: overview, overall trend, category charts, time-of-day, BIP goals, custom tracking, day-by-day table and data-quality notes. The report uses the current date filter and is laid out for US Letter (8.5×11, portrait, 0.5in margins):
+
+- Every chart is re-drawn at a fixed print size and high resolution, including charts on tabs you haven't opened. About two charts fit on each page.
+- A chart is never split across pages. If it doesn't fit, it moves to the next page.
+- The day-by-day table starts on a new page. Its columns are split into tables of at most 10 columns. Categories, tracking and each BIP goal's frequency/duration/intensity always stay together. A table that fits on one page is never split. A longer table only breaks between rows, and its header repeats on each page.
+- Each page has a footer with the student, date range and page number (in browsers that support it, e.g. Chrome or Edge).
+
+For best results, print from Chrome or Edge with **Background graphics** on and margins left at **Default**.
 
 ## Expected workbook layout
 
@@ -69,4 +80,5 @@ Typos in dates are fixed automatically and listed under **Settings → Data Qual
 | `render*Heatmap`, `generateHeatmapView` | Heatmaps |
 | `renderComparison` | Date comparison tab |
 | `updateSummaryTable`, `exportSummaryCsv` | Summary table and CSV |
-| `printChart`, `printFullReport`, `printFullSummary` | Printing |
+| `printChart` | Print a single chart |
+| `printFullReport`, `generateFullReport`, `renderChartForPrint` | Full-report dialog, Letter-size layout, off-screen chart rendering |

@@ -301,6 +301,8 @@
             padding: 24px;
             overflow: auto;
         }
+        .report-options { display: grid; gap: 8px; }
+        .report-option { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .chart-modal.active { display: flex; align-items: center; justify-content: center; }
 
         .chart-modal-content {
@@ -4458,183 +4460,261 @@
             }, 100);
         }
 
+        // ---------- Full report (US Letter, 8.5x11) ----------
+
+        const REPORT_SECTIONS = [
+            { id: 'overview', label: 'Overview & category averages' },
+            { id: 'trend', label: 'Overall average trend' },
+            { id: 'categories', label: 'Category charts' },
+            { id: 'timeofday', label: 'Time-of-day chart' },
+            { id: 'bip', label: 'BIP goal charts' },
+            { id: 'tracking', label: 'Custom tracking charts' },
+            { id: 'table', label: 'Day-by-day table' },
+            { id: 'quality', label: 'Data quality notes' }
+        ];
+
         function printFullReport() {
             if (!studentData) return;
-            const printWindow = window.open('', '', 'width=1100,height=800');
-            const days = filteredDays || studentData.days;
-            const dayAverages = days.map(day => {
-                const cats = Object.values(day.categories || {});
-                if (cats.length === 0) return 0;
-                return cats.reduce((s, c) => s + c.percentage, 0) / cats.length;
-            });
-            const overallAvg = dayAverages.length > 0 ? dayAverages.reduce((s, v) => s + v, 0) / dayAverages.length : 0;
-
-            // Gather chart images
-            const chartIds = ['categoryTrend', 'categoryPerformance', 'timeOfDay', 'bipGoals'];
-            const chartImgs = chartIds.map(id => {
-                const c = document.getElementById(id);
-                if (!c) return null;
-                const titleEl = c.closest('.chart-container')?.querySelector('.chart-title');
-                return { title: titleEl ? titleEl.textContent : id, src: c.toDataURL('image/png') };
-            }).filter(Boolean);
-            (studentData.trackingMeta || []).forEach(meta => {
-                const c = document.getElementById('tracking-slot-' + meta.slot);
-                if (c) chartImgs.push({ title: meta.label, src: c.toDataURL('image/png') });
-            });
-
-            const fmt = v => (Math.round(v * 10) / 10).toString();
-            const { cats, tracking, bipNames } = summaryColumns();
-
-            let html = `<!DOCTYPE html><html><head><title>Full Report — ${escapeHtml(studentData.name)}</title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 28px; color: #1e293b; font-size: 13px; }
-                .report-header { border-bottom: 3px solid #6366f1; padding-bottom: 14px; margin-bottom: 20px; }
-                .report-header h1 { font-size: 1.6rem; color: #4f46e5; }
-                .report-header .meta { color: #64748b; margin-top: 4px; }
-                .section-title { font-size: 1rem; font-weight: 700; margin: 22px 0 10px; color: #4f46e5; border-left: 4px solid #6366f1; padding-left: 10px; }
-                .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-                .stat-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; }
-                .stat-box .val { font-size: 1.4rem; font-weight: 800; color: #4f46e5; }
-                .stat-box .lbl { font-size: 0.75rem; color: #64748b; margin-top: 2px; text-transform: uppercase; }
-                .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; }
-                .chart-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; page-break-inside: avoid; }
-                .chart-box h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; }
-                .chart-box img { width: 100%; }
-                .cat-row { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; }
-                .cat-bar { flex: 1; height: 5px; background: #e5e7eb; border-radius: 3px; }
-                .cat-bar-fill { height: 5px; border-radius: 3px; }
-                .dq-item { padding: 7px 10px; border-left: 3px solid #f59e0b; background: #fffbeb; margin-bottom: 6px; border-radius: 0 4px 4px 0; }
-                table { border-collapse: collapse; width: 100%; font-size: 11px; margin-top: 6px; }
-                th, td { border: 1px solid #e5e7eb; padding: 3px 6px; text-align: right; }
-                thead th { background: #f8fafc; font-weight: 600; position: sticky; top: 0; }
-                td:first-child, th:first-child { text-align: left; }
-                tr.avg-row td { font-weight: 700; background: #ecfdf5 !important; border-top: 2px solid #10b981; }
-                @media print { body { padding: 0.3in; } }
-            </style></head><body>`;
-
-            html += `<div class="report-header">
-                <h1>📊 Behavior Report — ${escapeHtml(studentData.name)}</h1>
-                <div class="meta">${studentData.location && studentData.location !== 'Unknown' ? escapeHtml(studentData.location) + ' · ' : ''}${days.length} days · ${days[0].date.toLocaleDateString()} → ${days[days.length - 1].date.toLocaleDateString()} · Generated ${new Date().toLocaleDateString()}</div>
-            </div>`;
-
-            html += `<div class="stat-grid">
-                <div class="stat-box"><div class="val">${days.length}</div><div class="lbl">Days</div></div>
-                <div class="stat-box"><div class="val">${Math.round(overallAvg)}%</div><div class="lbl">Overall Avg</div></div>
-                <div class="stat-box"><div class="val">${allCategoryNames.length}</div><div class="lbl">Categories</div></div>
-                <div class="stat-box"><div class="val">${allBipGoalNames().length}</div><div class="lbl">BIP Goals</div></div>
-            </div>`;
-
-            html += '<div class="section-title">📈 Category Performance</div>';
-            allCategoryNames.forEach(cat => {
-                const vals = days.map(d => d.categories && d.categories[cat] ? d.categories[cat].percentage : 0);
-                const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-                const color = avg >= 70 ? '#10b981' : avg >= 50 ? '#f59e0b' : '#ef4444';
-                html += `<div class="cat-row">
-                    <span style="min-width: 220px;">${escapeHtml(cat)}</span>
-                    <div class="cat-bar"><div class="cat-bar-fill" style="width: ${Math.min(100, avg).toFixed(1)}%; background: ${color};"></div></div>
-                    <span style="font-weight: 700; color: ${color}; min-width: 50px; text-align: right;">${avg.toFixed(1)}%</span>
-                </div>`;
-            });
-
-            if (chartImgs.length > 0) {
-                html += '<div class="section-title">📊 Charts</div><div class="charts-grid">';
-                chartImgs.forEach(ci => {
-                    html += `<div class="chart-box"><h3>${escapeHtml(ci.title)}</h3><img src="${ci.src}"></div>`;
-                });
-                html += '</div>';
-            }
-
-            html += '<div class="section-title">📋 Day-by-Day Summary</div><div style="overflow-x: auto"><table>';
-            html += '<thead><tr><th>Date</th>';
-            cats.forEach(c => html += `<th>${escapeHtml(c)} %</th>`);
-            tracking.forEach(t => html += `<th>${escapeHtml(t.label)}</th>`);
-            bipNames.forEach(n => html += `<th>${escapeHtml(n).substring(0, 10)} F</th><th>D</th><th>I</th>`);
-            html += '</tr></thead><tbody>';
-            const sums = {};
-            days.forEach(day => {
-                html += `<tr><td>${day.date.toLocaleDateString()}</td>`;
-                cats.forEach(c => {
-                    const cd = day.categories && day.categories[c];
-                    const v = cd ? cd.percentage : 0;
-                    sums['c:' + c] = (sums['c:' + c] || 0) + v;
-                    html += `<td>${cd ? fmt(v) : '—'}</td>`;
-                });
-                tracking.forEach(t => {
-                    const td = day.tracking && day.tracking[t.slot];
-                    const v = td ? (td.value || 0) : 0;
-                    sums['t:' + t.slot] = (sums['t:' + t.slot] || 0) + v;
-                    html += `<td>${fmt(v)}</td>`;
-                });
-                bipNames.forEach(name => {
-                    const g = day.bipGoals.find(x => x.name === name);
-                    const f = g ? g.frequency : 0, d = g ? g.duration : 0, it = g ? g.intensity : 0;
-                    sums['bf:' + name] = (sums['bf:' + name] || 0) + f;
-                    sums['bd:' + name] = (sums['bd:' + name] || 0) + d;
-                    sums['bi:' + name] = (sums['bi:' + name] || 0) + it;
-                    html += `<td>${fmt(f)}</td><td>${fmt(d)}</td><td>${fmt(it)}</td>`;
-                });
-                html += '</tr>';
-            });
-            const n = days.length;
-            html += '<tr class="avg-row"><td>Average</td>';
-            cats.forEach(c => html += `<td>${fmt((sums['c:' + c] || 0) / n)}</td>`);
-            tracking.forEach(t => html += `<td>${fmt((sums['t:' + t.slot] || 0) / n)}</td>`);
-            bipNames.forEach(name => html += `<td>${fmt((sums['bf:' + name] || 0) / n)}</td><td>${fmt((sums['bd:' + name] || 0) / n)}</td><td>${fmt((sums['bi:' + name] || 0) / n)}</td>`);
-            html += '</tr></tbody></table></div>';
-
-            if (studentData.dataQualityIssues.length > 0) {
-                html += '<div class="section-title">⚠️ Data Quality Notes</div>';
-                studentData.dataQualityIssues.forEach(issue => html += `<div class="dq-item">${escapeHtml(issue)}</div>`);
-            }
-
-            html += '</body></html>';
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => printWindow.print(), 500);
+            const list = document.getElementById('reportOptionsList');
+            list.innerHTML = REPORT_SECTIONS.map(s =>
+                `<label class="report-option"><input type="checkbox" value="${s.id}" checked> ${s.label}</label>`
+            ).join('');
+            document.getElementById('reportOptionsModal').classList.add('active');
         }
 
-        function printFullSummary() {
-            const printWindow = window.open('', '', 'width=900,height=600');
-            let html = `<html><head><title>Behavior School Data - Full Summary</title><style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                h1 { color: #333; margin-bottom: 10px; }
-                h2 { color: #666; margin-top: 20px; }
-                p { line-height: 1.6; }
-                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                th { background-color: #f0f0f0; }
-                canvas { max-width: 100%; page-break-inside: avoid; margin: 15px 0; }
-            </style></head><body>`;
+        function closeReportOptions() {
+            document.getElementById('reportOptionsModal').classList.remove('active');
+        }
 
-            html += `<h1>${studentData.name}</h1>
-            <p><strong>Location:</strong> ${studentData.location}</p>
-            <p><strong>Total Days:</strong> ${(filteredDays || studentData.days).length}</p>
-            <p><strong>Date Range:</strong> ${studentData.dateRange.start.toLocaleDateString()} → ${studentData.dateRange.end.toLocaleDateString()}</p>`;
+        // Deep-copies a Chart.js config while keeping functions (gradients, tick callbacks).
+        function cloneChartValue(v) {
+            if (Array.isArray(v)) return v.map(cloneChartValue);
+            if (v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
+                const out = {};
+                Object.keys(v).forEach(k => { out[k] = cloneChartValue(v[k]); });
+                return out;
+            }
+            return v;
+        }
 
-            if (studentData.dataQualityIssues.length > 0) {
-                html += '<h2>Data Quality Issues</h2><ul>';
-                studentData.dataQualityIssues.forEach(issue => {
-                    html += `<li>${issue}</li>`;
+        // Re-draws an existing chart off-screen at a fixed print size and returns a PNG data URL.
+        // Works even when the chart's tab is hidden (where the live canvas has no size).
+        function renderChartForPrint(key, widthPx, heightPx) {
+            const original = charts[key];
+            if (!original) return null;
+            const holder = document.createElement('div');
+            holder.style.cssText = `position: fixed; left: -10000px; top: 0; width: ${widthPx}px; height: ${heightPx}px;`;
+            const canvas = document.createElement('canvas');
+            canvas.width = widthPx;
+            canvas.height = heightPx;
+            holder.appendChild(canvas);
+            document.body.appendChild(holder);
+            const options = cloneChartValue(original.config.options || {});
+            Object.assign(options, { responsive: false, maintainAspectRatio: false, animation: false, devicePixelRatio: 2 });
+            let src = null;
+            try {
+                const tmp = new Chart(canvas.getContext('2d'), {
+                    type: original.config.type,
+                    data: cloneChartValue(original.config.data),
+                    options,
+                    plugins: original.config.plugins || []
                 });
-                html += '</ul>';
+                src = tmp.toBase64Image('image/png');
+                tmp.destroy();
+            } catch (e) {
+                console.error('Could not render chart for print:', key, e);
+            }
+            holder.remove();
+            return src;
+        }
+
+        function chartTitleFor(key, fallback) {
+            const canvas = document.getElementById(key);
+            const el = canvas && (canvas.closest('.chart-container')?.querySelector('.chart-title')
+                || canvas.parentElement?.querySelector('h3'));
+            const t = el ? el.textContent.replace(/[⛶🖨️]/g, '').trim() : '';
+            return t || fallback;
+        }
+
+        function generateFullReport() {
+            const chosen = new Set([...document.querySelectorAll('#reportOptionsList input:checked')].map(i => i.value));
+            closeReportOptions();
+            if (chosen.size === 0) return;
+            const printWindow = window.open('', '', 'width=900,height=1000');
+            if (!printWindow) {
+                showMessage('Please allow pop-ups to print the report.', 'error');
+                return;
             }
 
-            html += '<h2>Charts</h2>';
-            ['categoryTrend', 'categoryPerformance', 'timeOfDay', 'bipGoals'].forEach(id => {
-                const canvas = document.getElementById(id);
-                if (canvas) {
-                    html += `<h3>${canvas.previousElementSibling?.querySelector('.chart-title')?.textContent || id}</h3>`;
-                    html += `<img src="${canvas.toDataURL('image/png')}" style="max-width: 100%; page-break-inside: avoid;">`;
-                }
+            const days = filteredDays || studentData.days;
+            if (days.length === 0) { printWindow.close(); return; }
+            const fmt = v => (Math.round(v * 10) / 10).toString();
+            const dayAverages = days.map(day => {
+                const cats = Object.values(day.categories || {});
+                return cats.length ? cats.reduce((s, c) => s + c.percentage, 0) / cats.length : 0;
             });
+            const overallAvg = dayAverages.reduce((s, v) => s + v, 0) / dayAverages.length;
 
-            html += '</body></html>';
+            // Printable area is 7.5in wide at 0.5in margins; 720 CSS px = 7.5in at 96 dpi.
+            const W = 720;
+            const FULL_H = 330;   // ~3.4in: two charts per page with titles
+            const chartBox = (key, title, h = FULL_H) => {
+                const src = renderChartForPrint(key, W, h);
+                return src ? `<figure class="chart-box"><figcaption>${escapeHtml(title)}</figcaption><img src="${src}" style="height:${h / 96}in"></figure>` : '';
+            };
+            const section = (title, body, cls = '') => body
+                ? `<section class="section ${cls}"><h2>${title}</h2>${body}</section>` : '';
+
+            const range = `${days[0].date.toLocaleDateString()} – ${days[days.length - 1].date.toLocaleDateString()}`;
+            const loc = studentData.location && studentData.location !== 'Unknown' ? escapeHtml(studentData.location) + ' · ' : '';
+            let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Behavior Report — ${escapeHtml(studentData.name)}</title>
+            <style>
+                @page { size: letter portrait; margin: 0.5in;
+                    @bottom-left { content: "${escapeHtml(studentData.name).replace(/"/g, '')} · ${range}"; font: 8pt Arial, sans-serif; color: #64748b; }
+                    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Arial, sans-serif; color: #64748b; } }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html, body { background: white; }
+                body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; font-size: 10pt; width: 7.5in; margin: 0 auto;
+                    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                .report-header { border-bottom: 3px solid #6366f1; padding-bottom: 10px; margin-bottom: 14px; break-inside: avoid; }
+                .report-header h1 { font-size: 18pt; color: #4f46e5; }
+                .report-header .meta { color: #64748b; margin-top: 3px; }
+                .section { margin-bottom: 14px; }
+                .section.page-start { break-before: page; }
+                h2 { font-size: 12pt; color: #4f46e5; border-left: 4px solid #6366f1; padding-left: 8px; margin: 4px 0 8px;
+                    break-after: avoid; page-break-after: avoid; }
+                .keep { break-inside: avoid; page-break-inside: avoid; }
+                .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+                .stat-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; text-align: center; }
+                .stat-box .val { font-size: 16pt; font-weight: 800; color: #4f46e5; }
+                .stat-box .lbl { font-size: 7.5pt; color: #64748b; text-transform: uppercase; }
+                .cat-row { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #f1f5f9; gap: 10px; }
+                .cat-bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; }
+                .cat-bar-fill { height: 6px; border-radius: 3px; }
+                .chart-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px 4px; margin-bottom: 10px;
+                    break-inside: avoid; page-break-inside: avoid; }
+                .chart-box figcaption { font-size: 9.5pt; font-weight: 700; margin-bottom: 4px; break-after: avoid; }
+                .chart-box img { display: block; width: 100%; object-fit: contain; }
+                /* A table that fits on one page moves whole to the next page; longer ones split between rows. */
+                .table-group { margin-bottom: 14px; break-inside: avoid; page-break-inside: avoid; }
+                th.block-head { text-align: center !important; background: #e0e7ff; color: #3730a3; }
+                table { border-collapse: collapse; width: 100%; font-size: 8pt; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+                tr { break-inside: avoid; page-break-inside: avoid; }
+                th, td { border: 1px solid #e5e7eb; padding: 2px 5px; text-align: right; }
+                thead th { text-align: center; }
+                th { background: #f1f5f9; font-weight: 600; }
+                tbody tr:nth-child(even) td { background: #fafbfc; }
+                td:first-child, th:first-child { text-align: left; white-space: nowrap; }
+                tr.avg-row td { font-weight: 700; background: #ecfdf5 !important; border-top: 2px solid #10b981; }
+                .dq-item { padding: 5px 8px; border-left: 3px solid #f59e0b; background: #fffbeb; margin-bottom: 5px; break-inside: avoid; }
+                @media screen { body { padding: 0.5in 0; } }
+            </style></head><body>`;
+
+            html += `<div class="report-header"><h1>Behavior Report — ${escapeHtml(studentData.name)}</h1>
+                <div class="meta">${loc}${days.length} days · ${range} · Generated ${new Date().toLocaleDateString()}</div></div>`;
+
+            if (chosen.has('overview')) {
+                let body = `<div class="stat-grid keep">
+                    <div class="stat-box"><div class="val">${days.length}</div><div class="lbl">Days</div></div>
+                    <div class="stat-box"><div class="val">${Math.round(overallAvg)}%</div><div class="lbl">Overall Avg</div></div>
+                    <div class="stat-box"><div class="val">${allCategoryNames.length}</div><div class="lbl">Categories</div></div>
+                    <div class="stat-box"><div class="val">${allBipGoalNames().length}</div><div class="lbl">BIP Goals</div></div>
+                </div><div class="keep">`;
+                allCategoryNames.forEach(cat => {
+                    const vals = days.map(d => d.categories && d.categories[cat] ? d.categories[cat].percentage : 0);
+                    const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+                    const color = avg >= 70 ? '#10b981' : avg >= 50 ? '#f59e0b' : '#ef4444';
+                    body += `<div class="cat-row"><span style="min-width: 2.4in;">${escapeHtml(cat)}</span>
+                        <div class="cat-bar"><div class="cat-bar-fill" style="width: ${Math.min(100, avg).toFixed(1)}%; background: ${color};"></div></div>
+                        <span style="font-weight: 700; color: ${color}; min-width: 0.6in; text-align: right;">${avg.toFixed(1)}%</span></div>`;
+                });
+                html += section('Overview', body + '</div>');
+            }
+
+            if (chosen.has('trend')) {
+                html += section('Overall Average Trend', chartBox('insightsAverageChart', 'Overall daily average (all categories)'));
+            }
+            if (chosen.has('categories')) {
+                html += section('Categories',
+                    chartBox('categoryTrend', chartTitleFor('categoryTrend', 'Category trend')) +
+                    chartBox('categoryPerformance', chartTitleFor('categoryPerformance', 'Category performance')));
+            }
+            if (chosen.has('timeofday')) {
+                html += section('Time of Day', chartBox('timeOfDay', chartTitleFor('timeOfDay', 'Time-of-day averages')));
+            }
+            if (chosen.has('bip')) {
+                let body = chartBox('bipGoals', chartTitleFor('bipGoals', 'BIP goals'));
+                getBipGoalNames().forEach(name => {
+                    const key = 'bip-' + safeId(name);
+                    body += chartBox(key, name);
+                });
+                html += section('BIP Goals', body);
+            }
+            if (chosen.has('tracking')) {
+                let body = '';
+                (studentData.trackingMeta || []).forEach(meta => {
+                    if (hiddenTrackingSlots.has(meta.slot)) return;
+                    body += chartBox('tracking-slot-' + meta.slot, meta.label, 260);
+                });
+                html += section('Custom Tracking', body);
+            }
+
+            if (chosen.has('table')) {
+                const { cats, tracking, bipNames } = summaryColumns();
+                // Columns come in blocks (categories, tracking, one block per BIP goal) that are never split.
+                // Blocks are packed into tables of at most 10 data columns so each fits 7.5in; Date repeats.
+                const blocks = [];
+                if (cats.length) blocks.push({ title: 'Categories (%)', cols: cats.map(c => ({ head: c, get: d => {
+                    const cd = d.categories && d.categories[c]; return cd ? cd.percentage : null; } })) });
+                if (tracking.length) blocks.push({ title: 'Custom Tracking', cols: tracking.map(t => ({ head: t.label, get: d => {
+                    const td = d.tracking && d.tracking[t.slot]; return td ? (td.value || 0) : 0; } })) });
+                bipNames.forEach(name => blocks.push({ title: name, cols: ['frequency', 'duration', 'intensity'].map(f => ({
+                    head: f[0].toUpperCase() + f.slice(1),
+                    get: d => { const g = d.bipGoals.find(x => x.name === name); return g ? g[f] : 0; } })) }));
+
+                const MAX_COLS = 10;
+                const tables = [];
+                blocks.forEach(bl => {
+                    const t = tables[tables.length - 1];
+                    const used = t ? t.reduce((n, x) => n + x.cols.length, 0) : Infinity;
+                    if (used + bl.cols.length <= MAX_COLS) t.push(bl); else tables.push([bl]);
+                });
+
+                let body = '';
+                tables.forEach(tblBlocks => {
+                    const cols = tblBlocks.flatMap(bl => bl.cols);
+                    body += '<div class="table-group"><table><thead><tr><th rowspan="2">Date</th>';
+                    tblBlocks.forEach(bl => body += `<th colspan="${bl.cols.length}" class="block-head">${escapeHtml(bl.title)}</th>`);
+                    body += '</tr><tr>';
+                    cols.forEach(c => body += `<th>${escapeHtml(c.head)}</th>`);
+                    body += '</tr></thead><tbody>';
+                    const sums = cols.map(() => 0), counts = cols.map(() => 0);
+                    days.forEach(day => {
+                        body += `<tr><td>${day.date.toLocaleDateString()}</td>`;
+                        cols.forEach((c, i) => {
+                            const v = c.get(day);
+                            if (v !== null) { sums[i] += v; counts[i]++; }
+                            body += `<td>${v === null ? '—' : fmt(v)}</td>`;
+                        });
+                        body += '</tr>';
+                    });
+                    body += '</tbody><tfoot><tr class="avg-row"><td>Average</td>';
+                    cols.forEach((c, i) => body += `<td>${counts[i] ? fmt(sums[i] / counts[i]) : '—'}</td>`);
+                    body += '</tr></tfoot></table></div>';
+                });
+                html += section('Day-by-Day Summary', body, 'page-start');
+            }
+
+            if (chosen.has('quality') && studentData.dataQualityIssues.length > 0) {
+                html += section('Data Quality Notes',
+                    studentData.dataQualityIssues.map(i => `<div class="dq-item">${escapeHtml(i)}</div>`).join(''));
+            }
+
+            html += `<script>window.onload = function () { setTimeout(function () { window.focus(); window.print(); }, 200); };<\/script></body></html>`;
             printWindow.document.write(html);
             printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => printWindow.print(), 1000);
         }
 
         function showMessage(message, type) {
@@ -4710,6 +4790,22 @@
             </div>
             <div class="chart-modal-body">
                 <div class="chart-modal-canvas-container" id="chartModalContainer"></div>
+            </div>
+        </div>
+    </div>
+    <div id="reportOptionsModal" class="chart-modal">
+        <div class="chart-modal-content" style="max-width: 460px; height: auto;">
+            <div class="chart-modal-header">
+                <h2 class="chart-modal-title">📄 Print Full Report</h2>
+                <button class="chart-modal-close" onclick="closeReportOptions()">✕</button>
+            </div>
+            <div class="chart-modal-body" style="height: auto;">
+                <p style="color: var(--text-secondary); margin-bottom: 10px;">Formatted for 8.5×11 paper. Uses the current date filter.</p>
+                <div id="reportOptionsList" class="report-options"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+                    <button class="clear-button" onclick="closeReportOptions()">Cancel</button>
+                    <button class="print-btn report" onclick="generateFullReport()">Print</button>
+                </div>
             </div>
         </div>
     </div>
