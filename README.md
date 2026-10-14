@@ -1,6 +1,6 @@
 # Behavior Visualization Tool
 
-A single-page, browser-only tool for analyzing one student's behavior-tracking workbook (.xlsx). It charts trends, time-of-day patterns, BIP goals, custom tracking and heatmaps, and prints reports.
+A single-page, browser-only tool for analyzing one student's point sheet (.xlsx). It charts trends, time-of-day patterns, BIP goals, custom tracking and heatmaps, and prints reports.
 
 **Privacy:** everything runs locally in the browser. The file is never uploaded, and the data is cleared on refresh or close.
 
@@ -14,7 +14,7 @@ Needs internet access to load two libraries from jsDelivr:
 
 ## Using it
 
-1. Drag the student's workbook onto the start page (anywhere works), or click the upload box to choose it.
+1. Drag the student's point sheet onto the start page (anywhere works), or click the upload box to choose it.
 2. Browse the tabs:
    - **Insights** – overall average trend (peaks/valleys highlighted) and category averages
    - **Categories** – per-category trend and performance charts (the category checkboxes here only filter this tab)
@@ -38,7 +38,7 @@ Needs internet access to load two libraries from jsDelivr:
 
 For best results, print from Chrome or Edge with **Background graphics** on and margins left at **Default**.
 
-## Expected workbook layout
+## Expected point sheet layout
 
 - **One sheet per month**, named with the month (e.g. `January`, `Sept 2024`). Sheets named `Master` or `Overall Summary` are skipped.
 - **Row 1:** student name in A1, location in B1.

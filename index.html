@@ -38,19 +38,19 @@
 
         .container { max-width: 1440px; margin: 0 auto; }
 
-        .intro { text-align: center; color: white; margin: 12px 0 22px; }
-        .intro h1 { font-size: 2rem; margin-bottom: 6px; }
+        .intro { text-align: center; color: white; margin: 0 0 12px; }
+        .intro h1 { font-size: 1.8rem; margin-bottom: 2px; }
         .intro p { font-size: 1.05rem; opacity: 0.92; }
         .upload-area {
             display: block;
             background: #ffffff;
             border: 3px dashed #c7d2fe;
             border-radius: var(--radius);
-            padding: 56px 40px;
+            padding: 22px 40px;
             text-align: center;
             cursor: pointer;
             transition: border-color 0.2s, background-color 0.2s, transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             box-shadow: var(--shadow-md);
         }
         .upload-area:hover, .upload-area.dragover {
@@ -60,16 +60,19 @@
             box-shadow: var(--shadow-lg);
         }
         .upload-area.dragover { border-style: solid; background: #eef2ff; }
-        .upload-icon { font-size: 2.6rem; margin-bottom: 8px; }
-        .upload-area h2 { margin-bottom: 10px; color: #1e293b; font-size: 1.6rem; }
-        .upload-area p { margin: 6px 0; color: #475569; }
+        .upload-icon { font-size: 1.9rem; margin-bottom: 2px; }
+        .upload-area h2 { margin-bottom: 4px; color: #1e293b; font-size: 1.45rem; }
+        .upload-area p { margin: 3px 0; color: #475569; }
         .upload-link { color: var(--primary-color); font-weight: 600; text-decoration: underline; }
         #fileInput { display: none; }
-        .intro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .intro-card { background: white; border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow-md); color: #334155; font-size: 0.92rem; line-height: 1.6; }
+        .intro-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px; }
+        .see-list { columns: 2; column-gap: 28px; }
+        .see-list li { break-inside: avoid; }
+        @media (max-width: 860px) { .intro-grid { grid-template-columns: 1fr; } .see-list { columns: 1; } }
+        .intro-card { background: white; border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow-md); color: #334155; font-size: 0.88rem; line-height: 1.5; }
         .intro-card h3 { font-size: 1.05rem; margin-bottom: 8px; color: #1e293b; }
         .intro-card ul { padding-left: 18px; margin: 0; }
-        .intro-card li { margin-bottom: 4px; }
+        .intro-card li { margin-bottom: 3px; }
         .intro-note { margin-top: 10px; font-size: 0.85rem; color: #64748b; }
         .file-formats { font-size: 0.9rem; color: var(--primary-color); font-weight: 600; }
         #fileInput { display: none; }
@@ -654,14 +657,14 @@
         <div id="uploadSection">
             <div class="intro">
                 <h1>Behavior Visualization Tool</h1>
-                <p>Turn a student's daily behavior-tracking workbook into charts, trends and printable reports.</p>
+                <p>Turn a student's point sheet into charts, trends and printable reports.</p>
             </div>
 
             <label class="upload-area" id="dropZone" for="fileInput">
                 <div class="upload-icon">📁</div>
-                <h2>Drop the student's workbook here</h2>
+                <h2>Drop the student's point sheet here</h2>
                 <p>or <span class="upload-link">click to choose a file</span></p>
-                <p class="file-formats">Excel workbook (.xlsx or .xls)</p>
+                <p class="file-formats">Excel file (.xlsx or .xls)</p>
             </label>
             <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
 
@@ -669,27 +672,22 @@
                 <div class="intro-card">
                     <h3>🔒 Private by design</h3>
                     <p>The file is read in your browser only. Nothing is uploaded or saved, and everything is cleared when you close or refresh the page.</p>
+                    <p class="intro-note">Date typos in the point sheet are fixed automatically and listed on the Settings tab.</p>
                 </div>
-                <div class="intro-card">
+                <div class="intro-card wide">
                     <h3>📊 What you'll see</h3>
-                    <ul>
-                        <li><strong>Insights</strong> – overall average, best and lowest days, trend, top time slots</li>
-                        <li><strong>Categories &amp; Time-of-Day</strong> – how each behavior goal is going and when</li>
-                        <li><strong>BIP Goals &amp; Custom Tracking</strong> – frequency, duration, intensity</li>
-                        <li><strong>Heatmaps &amp; BIP Hotspots</strong> – patterns across dates and times</li>
-                        <li><strong>Date Comparison &amp; Summary Table</strong> – side-by-side days, totals, CSV export</li>
-                        <li><strong>Full Report</strong> – a printable 8.5×11 report</li>
+                    <ul class="see-list">
+                        <li><strong>Insights</strong> – overall average, best and lowest days, trend direction and the top 3 time slots</li>
+                        <li><strong>Categories</strong> – each behavior category over time and its average</li>
+                        <li><strong>Time-of-Day</strong> – average score for every time slot, from Arrival to Dismissal</li>
+                        <li><strong>BIP Goals</strong> – frequency, duration and intensity for each goal</li>
+                        <li><strong>Custom Tracking</strong> – the extra tracking rows on the point sheet</li>
+                        <li><strong>Heatmaps</strong> – color grids of scores by date and time slot</li>
+                        <li><strong>BIP Hotspots</strong> – times and weekdays when a behavior keeps happening</li>
+                        <li><strong>Date Comparison</strong> – up to 5 days side by side, picked from a calendar</li>
+                        <li><strong>Summary Table</strong> – every day in one table with averages, totals and CSV export</li>
+                        <li><strong>Full Report</strong> – a printable 8.5×11 report of the sections you choose</li>
                     </ul>
-                </div>
-                <div class="intro-card">
-                    <h3>📋 What the file should look like</h3>
-                    <ul>
-                        <li>One sheet per month, named for the month (e.g. “September”)</li>
-                        <li>Student name in cell A1 and location in B1</li>
-                        <li>Each school day is a block starting with its date, followed by the four behavior categories, custom tracking rows and BIP goals</li>
-                        <li>Time slots run across columns B–Z (Arrival to Dismissal)</li>
-                    </ul>
-                    <p class="intro-note">Dates can be typed in most common formats. Date typos are fixed automatically and listed on the Settings tab.</p>
                 </div>
             </div>
         </div>
@@ -1125,7 +1123,7 @@
 
         function loadFile(file) {
             if (!/\.(xlsx|xls)$/i.test(file.name)) {
-                showMessage(`"${file.name}" isn't an Excel workbook. Please choose a .xlsx or .xls file.`, 'error');
+                showMessage(`"${file.name}" isn't an Excel file. Please choose a .xlsx or .xls file.`, 'error');
                 return;
             }
             showMessage('Processing file...', 'loading');
@@ -1135,7 +1133,7 @@
                     const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
                     const data = parseMultiSheetXlsx(workbook);
                     if (data.days.length === 0) {
-                        showMessage('No school days were found in this file. Check that it matches the layout described on this page.', 'error');
+                        showMessage('No school days were found in this file. Make sure it's a student point sheet with dated day blocks.', 'error');
                         return;
                     }
                     studentData = data;
