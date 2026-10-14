@@ -953,6 +953,7 @@
                     <div class="summary-table-wrap" id="summaryTableWrap">
                         <table class="summary-table" id="summaryTable"></table>
                     </div>
+                    <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">Total row — Categories: number of time slots scored 0 (incidents). BIP goals: total frequency and duration.</p>
                 </div>
 
                 <!-- Settings Tab -->
@@ -3789,11 +3790,12 @@
                 avg += `<td>${cnti > 0 ? fmt((sums[ki] || 0) / cnti) : '—'}</td>`;
             });
 
-            // Totals row: BIP frequency and duration only (summed intensity isn't meaningful)
+            // Totals row: category incidents (slots scored 0), BIP frequency and duration
+            // (summed intensity isn't meaningful)
             let totalRow = '';
-            if (bipNames.length) {
-                totalRow = `<td class="date-col">Total (${n} days)</td>`;
-                cats.forEach(() => totalRow += '<td></td>');
+            if (cats.length || bipNames.length) {
+                totalRow = `<td class="date-col" title="Categories: number of time slots scored 0. BIP: summed frequency and duration.">Total (${n} days)</td>`;
+                cats.forEach(c => totalRow += `<td title="Time slots scored 0">${categoryIncidents(days, c)}</td>`);
                 tracking.forEach(() => totalRow += '<td></td>');
                 bipNames.forEach(name => {
                     totalRow += `<td>${fmt(sums['bipF:' + name] || 0)}</td><td>${fmt(sums['bipD:' + name] || 0)}</td><td>—</td>`;
@@ -3823,6 +3825,16 @@
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c =>
                 ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // Number of time slots scored 0 for a category across the given days
+        function categoryIncidents(days, cat) {
+            let n = 0;
+            days.forEach(day => {
+                const cd = day.categories && day.categories[cat];
+                if (cd && cd.slots) cd.slots.forEach(v => { if (v === 0) n++; });
+            });
+            return n;
         }
 
         function exportSummaryCsv() {
@@ -3861,9 +3873,9 @@
                 });
                 rows.push(cells.map(csvCell).join(','));
             });
-            if (bipNames.length) {
-                const total = ['Total'];
-                cats.forEach(() => total.push(''));
+            if (cats.length || bipNames.length) {
+                const total = ['Total (categories: incidents scored 0)'];
+                cats.forEach(c => total.push(categoryIncidents(days, c)));
                 tracking.forEach(() => total.push(''));
                 bipNames.forEach(name => {
                     let f = 0, d = 0;
@@ -4888,7 +4900,7 @@
                 // Columns come in blocks (categories, tracking, one block per BIP goal) that are never split.
                 // Blocks are packed into tables of at most 10 data columns so each fits 7.5in; Date repeats.
                 const blocks = [];
-                if (cats.length) blocks.push({ title: 'Categories (%)', cols: cats.map(c => ({ head: c, get: d => {
+                if (cats.length) blocks.push({ title: 'Categories (%)', cols: cats.map(c => ({ head: c, incidents: () => categoryIncidents(days, c), get: d => {
                     const cd = d.categories && d.categories[c]; return cd ? cd.percentage : null; } })) });
                 if (tracking.length) blocks.push({ title: 'Custom Tracking', cols: tracking.map(t => ({ head: t.label, get: d => {
                     const td = d.tracking && d.tracking[t.slot]; return td ? (td.value || 0) : 0; } })) });
@@ -4925,9 +4937,9 @@
                     body += '</tbody><tfoot><tr class="avg-row"><td>Average</td>';
                     cols.forEach((c, i) => body += `<td>${counts[i] ? fmt(sums[i] / counts[i]) : '—'}</td>`);
                     body += '</tr>';
-                    if (cols.some(c => c.total)) {
+                    if (cols.some(c => c.total || c.incidents)) {
                         body += '<tr class="total-row"><td>Total</td>';
-                        cols.forEach((c, i) => body += `<td>${c.total ? fmt(sums[i]) : ''}</td>`);
+                        cols.forEach((c, i) => body += `<td>${c.incidents ? c.incidents() : c.total ? fmt(sums[i]) : ''}</td>`);
                         body += '</tr>';
                     }
                     body += '</tfoot></table></div>';

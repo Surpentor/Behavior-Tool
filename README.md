@@ -23,7 +23,7 @@ Needs internet access to load two libraries from jsDelivr:
    - **Custom Tracking** – the three free-form tracking rows
    - **Heatmap** – time-slot, category, average and daily-summary heatmaps, plus three BIP views: by time of day (one goal), time-slot averages (all goals) and daily totals. BIP colors run pale (0 = did not occur) to dark red (highest); grey means nothing was recorded. The time-slot BIP views need BIP numbers in the slot cells (B–Z); the daily view uses the totals column.
    - **Date Comparison** – compare chosen days side by side
-   - **Summary Table** – per-day table with pinned headers and Date column, averages, and BIP frequency/duration totals; exportable to CSV
+   - **Summary Table** – per-day table with pinned headers and Date column, averages, and a Total row (category incidents = time slots scored 0; BIP frequency/duration sums); exportable to CSV
    - **Settings** – date range filter, fix a single day's date, show/hide tracking rows, data-quality notes
 3. Use **expand** or **print** on any chart, or **Print Full Report** (see below).
 
