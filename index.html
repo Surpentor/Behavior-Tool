@@ -469,13 +469,36 @@
             border: 1px solid #c7d2fe;
         }
 
+        .cal-wrap { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+        .cal { width: 320px; max-width: 100%; }
+        .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .cal-head select { flex: 1; width: auto; padding: 7px; border: 1px solid #e5e7eb; border-radius: 6px; font-weight: 600; }
+        .cal-nav { width: 34px; height: 34px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-size: 1.2rem; cursor: pointer; }
+        .cal-nav:disabled { opacity: 0.35; cursor: default; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-dow { text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); padding: 4px 0; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.9rem; }
+        .cal-day.empty { color: #cbd5e1; }
+        button.cal-day { border: 2px solid #c7d2fe; background: #eef2ff; color: #1e293b; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        button.cal-day:hover:not(:disabled) { border-color: var(--primary-color); }
+        button.cal-day.on { color: white; }
+        button.cal-day:disabled { opacity: 0.4; cursor: not-allowed; }
+        .cal-legend { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px; }
+        .cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+        .cal-dot.has { background: #eef2ff; border: 2px solid #c7d2fe; margin-left: 0; }
+        .cal-dot.none { background: white; border: 1px solid #e2e8f0; margin-left: 10px; }
+        .cal-side { flex: 1; min-width: 240px; }
+        .cal-side-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .cal-selected { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+        .cal-chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 10px; border: 2px solid; border-radius: 20px; font-size: 0.85rem; background: white; }
+        .cal-chip button { border: none; background: none; font-size: 1.1rem; line-height: 1; cursor: pointer; color: var(--text-secondary); padding: 0 4px; }
+        .cal-chip button:hover { color: var(--danger-color); }
+        .cal-hint { font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px; }
         #dateSelectionArea {
             border: 1px solid var(--border-color);
-            padding: 10px;
+            padding: 14px;
             border-radius: 6px;
             background: white;
-            max-height: 160px;
-            overflow-y: auto;
             margin: 10px 0;
         }
 
@@ -1574,106 +1597,111 @@
         const COMPARISON_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
         const SLOT_LABELS = ['Arrival', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dismissal'];
 
+        // ---------- Date Comparison: calendar picker ----------
+        const MAX_COMPARISON_DATES = 5;
+        let comparisonCalMonth = null; // 'YYYY-MM'
+
+        function monthKeyOf(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+
         function buildDateSelectionArea() {
             const area = document.getElementById('dateSelectionArea');
-
-            // Group dates by month
-            const monthMap = {};
-            studentData.days.forEach((day, idx) => {
-                const monthKey = day.date.getFullYear() + '-' + String(day.date.getMonth() + 1).padStart(2, '0');
-                if (!monthMap[monthKey]) {
-                    monthMap[monthKey] = [];
-                }
-                monthMap[monthKey].push({ day, idx });
-            });
-
-            const months = Object.keys(monthMap).sort();
-            const defaultMonth = months.length > 0 ? months[months.length - 1] : null;
-
-            let html = '<div style="margin-bottom: 12px;">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">';
-            html += '<div style="flex: 1;">';
-            html += '<label for="monthFilter" style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem;">Filter by month:</label>';
-            html += '<select id="monthFilter" onchange="updateDatePills()" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">';
-
-            months.forEach(m => {
-                const [year, month] = m.split('-');
-                const date = new Date(year, parseInt(month) - 1);
-                const label = date.toLocaleString('default', { month: 'long', year: 'numeric' });
-                html += `<option value="${m}" ${m === defaultMonth ? 'selected' : ''}>${label}</option>`;
-            });
-
-            html += '</select>';
-            html += '</div>';
-            html += '<button class="btn btn-secondary" onclick="clearComparisonDates()" style="padding: 6px 12px; font-size: 0.85rem; align-self: flex-end;">Clear All Dates</button>';
-            html += '</div>';
-            html += '</div>';
-            html += '<div style="display: flex; flex-wrap: wrap; gap: 8px;" id="datePillList"></div>';
-
-            area.innerHTML = html;
-
-            // Populate initial month
+            const months = [...new Set(studentData.days.map(d => monthKeyOf(d.date)))].sort();
+            comparisonCalMonth = months.length ? months[months.length - 1] : null;
+            area.innerHTML = `
+                <div class="cal-wrap">
+                    <div class="cal">
+                        <div class="cal-head">
+                            <button class="cal-nav" onclick="shiftComparisonMonth(-1)" aria-label="Previous month">‹</button>
+                            <select id="monthFilter" onchange="comparisonCalMonth = this.value; updateDatePills()">
+                                ${months.map(m => {
+                                    const [y, mo] = m.split('-');
+                                    return `<option value="${m}">${new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`;
+                                }).join('')}
+                            </select>
+                            <button class="cal-nav" onclick="shiftComparisonMonth(1)" aria-label="Next month">›</button>
+                        </div>
+                        <div class="cal-grid" id="datePillList"></div>
+                        <div class="cal-legend"><span class="cal-dot has"></span> has data <span class="cal-dot none"></span> no data</div>
+                    </div>
+                    <div class="cal-side">
+                        <div class="cal-side-head">
+                            <strong>Selected <span id="calSelCount">0</span> / ${MAX_COMPARISON_DATES}</strong>
+                            <button class="btn btn-secondary" onclick="clearComparisonDates()" style="padding: 6px 12px; font-size: 0.85rem;">Clear All Dates</button>
+                        </div>
+                        <div id="calSelected" class="cal-selected"></div>
+                        <p class="cal-hint">Click a day to add or remove it. Colors match the comparison chart.</p>
+                    </div>
+                </div>`;
             updateDatePills();
             updateComparisonConfig();
         }
 
+        function shiftComparisonMonth(step) {
+            const sel = document.getElementById('monthFilter');
+            const opts = [...sel.options].map(o => o.value);
+            const i = opts.indexOf(comparisonCalMonth) + step;
+            if (i < 0 || i >= opts.length) return;
+            comparisonCalMonth = opts[i];
+            updateDatePills();
+        }
+
+        function comparisonColorFor(idx) {
+            const order = [...selectedDatesForComparison].sort((a, b) => a - b);
+            return COMPARISON_COLORS[order.indexOf(idx) % COMPARISON_COLORS.length];
+        }
+
+        // Renders the calendar for the current month plus the selected-dates list.
         function updateDatePills() {
-            const monthFilter = document.getElementById('monthFilter');
-            const selectedMonth = monthFilter ? monthFilter.value : null;
-            const pillList = document.getElementById('datePillList');
+            const grid = document.getElementById('datePillList');
+            if (!grid || !comparisonCalMonth) { if (grid) grid.innerHTML = ''; return; }
+            const sel = document.getElementById('monthFilter');
+            sel.value = comparisonCalMonth;
+            const opts = [...sel.options].map(o => o.value);
+            const pos = opts.indexOf(comparisonCalMonth);
+            document.querySelectorAll('.cal-nav')[0].disabled = pos <= 0;
+            document.querySelectorAll('.cal-nav')[1].disabled = pos >= opts.length - 1;
 
-            if (!selectedMonth) {
-                pillList.innerHTML = '';
-                return;
-            }
-
-            const monthMap = {};
-            studentData.days.forEach((day, idx) => {
-                const monthKey = day.date.getFullYear() + '-' + String(day.date.getMonth() + 1).padStart(2, '0');
-                if (!monthMap[monthKey]) {
-                    monthMap[monthKey] = [];
-                }
-                monthMap[monthKey].push({ day, idx });
+            const [y, m] = comparisonCalMonth.split('-').map(Number);
+            const byDay = {};
+            studentData.days.forEach((d, idx) => {
+                if (d.date.getFullYear() === y && d.date.getMonth() === m - 1) byDay[d.date.getDate()] = idx;
             });
+            const first = new Date(y, m - 1, 1).getDay();
+            const count = new Date(y, m, 0).getDate();
+            const full = selectedDatesForComparison.size >= MAX_COMPARISON_DATES;
 
-            const daysInMonth = monthMap[selectedMonth] || [];
-            pillList.innerHTML = daysInMonth.map(({day, idx}) => {
-                const isSelected = selectedDatesForComparison.has(idx);
-                return `<button
-                    class="comparisonDatePill"
-                    data-idx="${idx}"
-                    onclick="toggleComparisonDatePill(${idx})"
-                    style="
-                        padding: 8px 16px;
-                        border: 2px solid ${isSelected ? '#6366f1' : '#cbd5e1'};
-                        border-radius: 20px;
-                        background: ${isSelected ? '#6366f1' : 'white'};
-                        color: ${isSelected ? 'white' : '#334155'};
-                        cursor: pointer;
-                        font-weight: 500;
-                        font-size: 0.9rem;
-                        transition: all 0.2s ease;
-                    "
-                >${day.date.toLocaleDateString()}</button>`;
-            }).join('');
+            let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+            for (let i = 0; i < first; i++) html += '<div></div>';
+            for (let d = 1; d <= count; d++) {
+                const idx = byDay[d];
+                if (idx === undefined) { html += `<div class="cal-day empty">${d}</div>`; continue; }
+                const on = selectedDatesForComparison.has(idx);
+                const style = on ? ` style="background: ${comparisonColorFor(idx)}; border-color: ${comparisonColorFor(idx)};"` : '';
+                const disabled = !on && full ? ' disabled title="Up to 5 dates — remove one first"' : '';
+                html += `<button class="cal-day has${on ? ' on' : ''}" data-idx="${idx}"${style}${disabled} onclick="toggleComparisonDatePill(${idx})">${d}</button>`;
+            }
+            grid.innerHTML = html;
+
+            const order = [...selectedDatesForComparison].sort((a, b) => a - b);
+            document.getElementById('calSelCount').textContent = order.length;
+            document.getElementById('calSelected').innerHTML = order.length
+                ? order.map(idx => `<span class="cal-chip" style="border-color: ${comparisonColorFor(idx)};">
+                    <span class="cal-dot" style="background: ${comparisonColorFor(idx)};"></span>
+                    ${studentData.days[idx].date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    <button onclick="toggleComparisonDatePill(${idx})" aria-label="Remove">×</button></span>`).join('')
+                : '<span class="cal-hint">No dates selected yet.</span>';
         }
 
         function toggleComparisonDatePill(idx) {
-            const pill = document.querySelector(`button.comparisonDatePill[data-idx="${idx}"]`);
-            const isSelected = selectedDatesForComparison.has(idx);
-
-            if (isSelected) {
+            if (selectedDatesForComparison.has(idx)) {
                 selectedDatesForComparison.delete(idx);
-                pill.style.background = 'white';
-                pill.style.color = '#334155';
-                pill.style.borderColor = '#cbd5e1';
             } else {
+                if (selectedDatesForComparison.size >= MAX_COMPARISON_DATES) return;
                 selectedDatesForComparison.add(idx);
-                pill.style.background = '#6366f1';
-                pill.style.color = 'white';
-                pill.style.borderColor = '#6366f1';
             }
-
+            updateDatePills();
             renderComparison();
         }
 
@@ -1900,12 +1928,7 @@
 
         function clearComparisonDates() {
             selectedDatesForComparison.clear();
-            // Reset all pill colors
-            document.querySelectorAll('button.comparisonDatePill').forEach(pill => {
-                pill.style.background = 'white';
-                pill.style.color = '#334155';
-                pill.style.borderColor = '#cbd5e1';
-            });
+            updateDatePills();
             renderComparison();
         }
 
