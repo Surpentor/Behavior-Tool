@@ -1267,6 +1267,25 @@
             // Room around the plot so first/last points and lines aren't clipped at the chart's edges
             Chart.defaults.layout.padding = { top: 8, right: 14, bottom: 0, left: 6 };
             Chart.defaults.datasets.line.clip = 8;
+            // Date axes: show "8/12" instead of "8/12/2026" so every date fits (tooltips keep the full date),
+            // and show every date when there's room instead of skipping alternate ones.
+            const shortDate = l => (typeof l === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(l)) ? l.replace(/\/\d{2,4}$/, '') : l;
+            Chart.defaults.scales.category.ticks.callback = function (value) {
+                const label = this.getLabelForValue(value);
+                return Array.isArray(label) ? label : shortDate(label);
+            };
+            Chart.defaults.scales.category.ticks.autoSkipPadding = 2;
+            Chart.register({
+                id: 'allDateLabels',
+                beforeUpdate(chart) {
+                    const labels = chart.data.labels || [];
+                    const x = chart.options.scales && chart.options.scales.x;
+                    if (!x || chart.config.type !== 'line' || labels.length > 70) return;
+                    if (!labels.every(l => typeof l === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(l))) return;
+                    x.ticks = Object.assign({}, x.ticks, { autoSkip: false, maxRotation: 90, minRotation: labels.length > 25 ? 90 : 0,
+                        font: { size: labels.length > 45 ? 9 : 10 } });
+                }
+            });
         }
         document.addEventListener('DOMContentLoaded', () => applyA11y(false));
 
