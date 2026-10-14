@@ -38,25 +38,39 @@
 
         .container { max-width: 1440px; margin: 0 auto; }
 
+        .intro { text-align: center; color: white; margin: 12px 0 22px; }
+        .intro h1 { font-size: 2rem; margin-bottom: 6px; }
+        .intro p { font-size: 1.05rem; opacity: 0.92; }
         .upload-area {
-            background: rgba(255, 255, 255, 0.97);
-            border: 2px dashed #c7d2fe;
+            display: block;
+            background: #ffffff;
+            border: 3px dashed #c7d2fe;
             border-radius: var(--radius);
-            padding: 72px 40px;
+            padding: 56px 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: border-color 0.2s, background-color 0.2s, transform 0.2s, box-shadow 0.2s;
             margin-bottom: 24px;
             box-shadow: var(--shadow-md);
         }
-        .upload-area:hover {
+        .upload-area:hover, .upload-area.dragover {
             border-color: var(--primary-color);
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(16, 185, 129, 0.06));
-            transform: translateY(-4px);
+            background: #f5f7ff;
+            transform: translateY(-3px);
             box-shadow: var(--shadow-lg);
         }
-        .upload-area h2 { margin-bottom: 12px; color: var(--text-primary); font-size: 1.6rem; }
-        .upload-area p { margin: 8px 0; color: var(--text-secondary); }
+        .upload-area.dragover { border-style: solid; background: #eef2ff; }
+        .upload-icon { font-size: 2.6rem; margin-bottom: 8px; }
+        .upload-area h2 { margin-bottom: 10px; color: #1e293b; font-size: 1.6rem; }
+        .upload-area p { margin: 6px 0; color: #475569; }
+        .upload-link { color: var(--primary-color); font-weight: 600; text-decoration: underline; }
+        #fileInput { display: none; }
+        .intro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .intro-card { background: white; border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow-md); color: #334155; font-size: 0.92rem; line-height: 1.6; }
+        .intro-card h3 { font-size: 1.05rem; margin-bottom: 8px; color: #1e293b; }
+        .intro-card ul { padding-left: 18px; margin: 0; }
+        .intro-card li { margin-bottom: 4px; }
+        .intro-note { margin-top: 10px; font-size: 0.85rem; color: #64748b; }
         .file-formats { font-size: 0.9rem; color: var(--primary-color); font-weight: 600; }
         #fileInput { display: none; }
 
@@ -638,12 +652,46 @@
 <body>
     <div class="container">
         <div id="uploadSection">
-            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                <h2>📁 Upload Behavior Tracking File</h2>
-                <p>Click to select or drag and drop your .xlsx file</p>
-                <p class="file-formats">Supports multi-month xlsx with repeating day blocks</p>
+            <div class="intro">
+                <h1>Behavior School Data Tool</h1>
+                <p>Turn a student's daily behavior-tracking workbook into charts, trends and printable reports.</p>
             </div>
+
+            <label class="upload-area" id="dropZone" for="fileInput">
+                <div class="upload-icon">📁</div>
+                <h2>Drop the student's workbook here</h2>
+                <p>or <span class="upload-link">click to choose a file</span></p>
+                <p class="file-formats">Excel workbook (.xlsx or .xls)</p>
+            </label>
             <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+
+            <div class="intro-grid">
+                <div class="intro-card">
+                    <h3>🔒 Private by design</h3>
+                    <p>The file is read in your browser only. Nothing is uploaded or saved, and everything is cleared when you close or refresh the page.</p>
+                </div>
+                <div class="intro-card">
+                    <h3>📊 What you'll see</h3>
+                    <ul>
+                        <li><strong>Insights</strong> – overall average, best and lowest days, trend, top time slots</li>
+                        <li><strong>Categories &amp; Time-of-Day</strong> – how each behavior goal is going and when</li>
+                        <li><strong>BIP Goals &amp; Custom Tracking</strong> – frequency, duration, intensity</li>
+                        <li><strong>Heatmaps &amp; BIP Hotspots</strong> – patterns across dates and times</li>
+                        <li><strong>Date Comparison &amp; Summary Table</strong> – side-by-side days, totals, CSV export</li>
+                        <li><strong>Full Report</strong> – a printable 8.5×11 report</li>
+                    </ul>
+                </div>
+                <div class="intro-card">
+                    <h3>📋 What the file should look like</h3>
+                    <ul>
+                        <li>One sheet per month, named for the month (e.g. “September”)</li>
+                        <li>Student name in cell A1 and location in B1</li>
+                        <li>Each school day is a block starting with its date, followed by the four behavior categories, custom tracking rows and BIP goals</li>
+                        <li>Time slots run across columns B–Z (Arrival to Dismissal)</li>
+                    </ul>
+                    <p class="intro-note">Dates can be typed in most common formats. Date typos are fixed automatically and listed on the Settings tab.</p>
+                </div>
+            </div>
         </div>
 
         <div id="messageArea"></div>
@@ -1071,27 +1119,61 @@
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (file) loadFile(file);
+            event.target.value = ''; // allow re-choosing the same file
+        }
 
+        function loadFile(file) {
+            if (!/\.(xlsx|xls)$/i.test(file.name)) {
+                showMessage(`"${file.name}" isn't an Excel workbook. Please choose a .xlsx or .xls file.`, 'error');
+                return;
+            }
             showMessage('Processing file...', 'loading');
-            try {
-                const reader = new FileReader();
-                reader.onload = (e) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
                     const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
-                    studentData = parseMultiSheetXlsx(workbook);
+                    const data = parseMultiSheetXlsx(workbook);
+                    if (data.days.length === 0) {
+                        showMessage('No school days were found in this file. Check that it matches the layout described on this page.', 'error');
+                        return;
+                    }
+                    studentData = data;
                     filteredDays = [...studentData.days];
                     initializeDashboard();
                     document.getElementById('uploadSection').style.display = 'none';
                     document.getElementById('dashboard').classList.add('active');
                     showMessage('File loaded successfully!', 'success');
-                };
-                reader.onerror = () => showMessage('Failed to read file', 'error');
-                reader.readAsBinaryString(file);
-            } catch (error) {
-                showMessage(`Error: ${error.message}`, 'error');
-                console.error(error);
-            }
+                } catch (error) {
+                    showMessage(`Couldn't read this file: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            };
+            reader.onerror = () => showMessage('Failed to read file', 'error');
+            reader.readAsBinaryString(file);
         }
+
+        // Drag and drop: the drop zone highlights, and a file dropped anywhere on the start page loads.
+        (function setupDragAndDrop() {
+            const zone = () => document.getElementById('dropZone');
+            const onStartPage = () => document.getElementById('uploadSection').style.display !== 'none';
+            let depth = 0;
+            window.addEventListener('dragenter', e => {
+                if (!onStartPage() || !e.dataTransfer?.types?.includes('Files')) return;
+                e.preventDefault(); depth++; zone()?.classList.add('dragover');
+            });
+            window.addEventListener('dragover', e => { if (onStartPage()) e.preventDefault(); });
+            window.addEventListener('dragleave', () => {
+                if (--depth <= 0) { depth = 0; zone()?.classList.remove('dragover'); }
+            });
+            window.addEventListener('drop', e => {
+                e.preventDefault();
+                depth = 0; zone()?.classList.remove('dragover');
+                if (!onStartPage()) return;
+                const file = e.dataTransfer?.files?.[0];
+                if (file) loadFile(file);
+            });
+        })();
 
         function parseMultiSheetXlsx(workbook) {
             const sheetNames = workbook.SheetNames;

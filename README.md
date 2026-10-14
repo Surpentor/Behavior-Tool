@@ -14,7 +14,7 @@ Needs internet access to load two libraries from jsDelivr:
 
 ## Using it
 
-1. Click the upload area and choose the student's workbook.
+1. Drag the student's workbook onto the start page (anywhere works), or click the upload box to choose it.
 2. Browse the tabs:
    - **Insights** – overall average trend (peaks/valleys highlighted) and category averages
    - **Categories** – per-category trend and performance charts (the category checkboxes here only filter this tab)
