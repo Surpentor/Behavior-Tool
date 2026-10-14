@@ -27,6 +27,18 @@ Needs internet access to load two libraries from jsDelivr:
    - **Settings** – date range filter, fix a single day's date, show/hide tracking rows, data-quality notes
 3. Use **expand** or **print** on any chart, or **Print Full Report** (see below).
 
+## Accessibility
+
+The **♿ Accessibility** button (bottom-right, on every screen) opens these options. They're saved in the browser:
+
+- **Colorblind-safe colors** – Okabe–Ito colors for chart lines and bars, and an orange → blue scale instead of red → green for scores, heatmaps and status colors. BIP heatmaps already use a light-to-dark scale, so they read correctly without color.
+- **Line patterns** – each chart line gets its own dash style and point shape, so lines can be told apart without color or in black-and-white prints.
+- **High contrast** – black text, stronger borders and a white background.
+- **Larger text** – about 18% larger across the app and in charts.
+- **Reduce motion** – no chart animations or hover movement. It's on automatically if the computer's "reduce motion" setting is on.
+
+Every control works from the keyboard and shows a clear focus outline. You can open the file picker by pressing Enter on the upload box.
+
 ## Full report
 
 **Print Full Report** opens a dialog where you choose which sections to include: overview (with top 3 time slots), overall trend, category charts, time-of-day, BIP goals, BIP patterns (hotspot list and grids, using the thresholds set on the Hotspots view), custom tracking, day-by-day table (with totals) and data-quality notes. The report uses the current date filter and is laid out for US Letter (8.5×11, portrait, 0.5in margins):

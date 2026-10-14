@@ -413,9 +413,9 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .insight-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-        .insight-card.good { border-top-color: var(--secondary-color); }
-        .insight-card.warn { border-top-color: var(--warning-color); }
-        .insight-card.bad { border-top-color: var(--danger-color); }
+        .insight-card.good { border-top-color: var(--good, #10b981); }
+        .insight-card.warn { border-top-color: var(--warn, #f59e0b); }
+        .insight-card.bad { border-top-color: var(--bad, #ef4444); }
         .insight-card .insight-icon { font-size: 1.8rem; margin-bottom: 8px; }
         .insight-card .insight-label {
             font-size: 0.8rem; color: var(--text-secondary);
@@ -453,6 +453,8 @@
         }
         .trend-up { background: #d1fae5; color: #065f46; }
         .trend-down { background: #fee2e2; color: #991b1b; }
+        .a11y-colorsafe .trend-up { background: #dbeafe; color: #1e3a8a; }
+        .a11y-colorsafe .trend-down { background: #fde8d0; color: #7c2d12; }
         .trend-flat { background: #e2e8f0; color: #475569; }
 
         @page { size: 8.5in 11in; margin: 0.5in; }
@@ -650,6 +652,40 @@
         .summary-table tr.total-row td.date-col { background: #e0e7ff !important; }
 
 
+        /* ---------- Accessibility ---------- */
+        .a11y-button { position: fixed; right: 16px; bottom: 16px; z-index: 11000; padding: 10px 14px; border-radius: 999px;
+            border: 2px solid #1e293b; background: #ffffff; color: #1e293b; font-weight: 700; font-size: 0.9rem; cursor: pointer; box-shadow: var(--shadow-lg); }
+        .a11y-button:hover { background: #eef2ff; }
+        .a11y-panel { position: fixed; right: 16px; bottom: 70px; z-index: 11001; width: 340px; max-width: calc(100vw - 32px);
+            background: #ffffff; color: #1e293b; border: 2px solid #1e293b; border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow-lg); }
+        .a11y-panel h2 { font-size: 1.1rem; margin-bottom: 10px; }
+        .a11y-panel label { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; cursor: pointer; border-bottom: 1px solid #e5e7eb; }
+        .a11y-panel input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+        .a11y-panel small { display: block; color: #475569; font-size: 0.8rem; line-height: 1.35; }
+        .a11y-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+        .a11y-actions button { padding: 7px 14px; border-radius: 8px; border: 2px solid #1e293b; background: white; color: #1e293b; font-weight: 600; cursor: pointer; }
+        .a11y-actions .a11y-close { background: #1e293b; color: white; }
+        .a11y-note { font-size: 0.75rem; color: #475569; margin-top: 10px; }
+        /* Always show a clear keyboard focus ring */
+        :focus-visible { outline: 3px solid #1d4ed8 !important; outline-offset: 2px; }
+        /* Larger text */
+        html.a11y-large { font-size: 118%; }
+        /* High contrast */
+        html.a11y-contrast { --text-primary: #000000; --text-secondary: #1f2937; --border-color: #374151; }
+        html.a11y-contrast body { background: #ffffff !important; }
+        html.a11y-contrast .intro { color: #000000; }
+        html.a11y-contrast .chart-container, html.a11y-contrast .insight-card, html.a11y-contrast .intro-card,
+        html.a11y-contrast .control-group, html.a11y-contrast .dashboard-header, html.a11y-contrast .tabs-container,
+        html.a11y-contrast .upload-area { border: 2px solid #000000 !important; box-shadow: none !important; }
+        html.a11y-contrast .tab-button { color: #000000; }
+        html.a11y-contrast .tab-button.active { background: #000000; color: #ffffff; }
+        html.a11y-contrast th, html.a11y-contrast td { border-color: #4b5563 !important; }
+        html.a11y-contrast .cold, html.a11y-contrast .hotspot-key, html.a11y-contrast small { color: #1f2937 !important; }
+        /* Reduce motion */
+        html.a11y-reduce-motion *, html.a11y-reduce-motion *::before, html.a11y-reduce-motion *::after {
+            transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+        html.a11y-reduce-motion .upload-area:hover, html.a11y-reduce-motion .chart-container:hover { transform: none !important; }
+        @media print { .a11y-button, .a11y-panel { display: none !important; } }
     </style>
 </head>
 <body>
@@ -660,7 +696,7 @@
                 <p>Turn a student's point sheet into charts, trends and printable reports.</p>
             </div>
 
-            <label class="upload-area" id="dropZone" for="fileInput">
+            <label class="upload-area" id="dropZone" for="fileInput" tabindex="0" role="button" aria-label="Choose a point sheet file" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('fileInput').click(); }">
                 <div class="upload-icon">📁</div>
                 <h2>Drop the student's point sheet here</h2>
                 <p>or <span class="upload-link">click to choose a file</span></p>
@@ -1111,6 +1147,116 @@
         let filteredDays = null;
         let selectedDatesForComparison = new Set();
         let charts = {};
+        // ---------- Accessibility settings ----------
+        // Saved per browser. Colorblind-safe mode swaps every palette for colors that stay distinct with
+        // red-green color blindness (Okabe-Ito categories; orange→blue score scale instead of red→green).
+        const A11Y_DEFAULTS = { colorSafe: false, patterns: false, contrast: false, largeText: false,
+            reduceMotion: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) };
+        let a11y = { ...A11Y_DEFAULTS };
+        try { Object.assign(a11y, JSON.parse(localStorage.getItem('bvt-a11y') || '{}')); } catch (e) { /* storage unavailable */ }
+
+        const PALETTES = {
+            standard: {
+                cats: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#d946ef'],
+                score: ['#ef4444', '#f97316', '#fb923c', '#fbbf24', '#10b981'],   // <50, 50, 60, 70, 80+
+                status: { good: '#10b981', warn: '#f59e0b', bad: '#ef4444' }
+            },
+            colorSafe: {
+                cats: ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#CC79A7', '#56B4E9', '#000000', '#999999', '#882255', '#44AA99'],
+                score: ['#b35806', '#e08214', '#fdb863', '#67a9cf', '#2166ac'],
+                status: { good: '#2166ac', warn: '#e08214', bad: '#b35806' }
+            }
+        };
+        const pal = () => a11y.colorSafe ? PALETTES.colorSafe : PALETTES.standard;
+        function catColors() { return pal().cats.slice(); }
+        // Color for a 0–100 score, banded at 50/60/70/80 like the rest of the app
+        function scoreColor(v) {
+            const s = pal().score;
+            return v >= 80 ? s[4] : v >= 70 ? s[3] : v >= 60 ? s[2] : v >= 50 ? s[1] : s[0];
+        }
+        function statusColor(level) { return pal().status[level]; }
+        // Frequency / duration / intensity series colors for BIP charts
+        function fdiColors() { return a11y.colorSafe ? { f: '#D55E00', d: '#E69F00', i: '#0072B2' } : { f: '#ef4444', d: '#f59e0b', i: '#10b981' }; }
+
+        const LINE_DASHES = [[], [8, 4], [2, 3], [12, 4, 3, 4], [4, 4], [1, 2]];
+        const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'crossRot'];
+
+        // Gives each line its own dash pattern and point shape when "line patterns" is on,
+        // so series can be told apart without color (and in black-and-white printouts).
+        const a11yPatternPlugin = {
+            id: 'a11yPatterns',
+            beforeUpdate(chart) {
+                if (!a11y.patterns) return;
+                chart.data.datasets.forEach((ds, i) => {
+                    const type = ds.type || chart.config.type;
+                    if (type !== 'line') return;
+                    if (chart.data.datasets.length > 1) ds.borderDash = LINE_DASHES[i % LINE_DASHES.length];
+                    ds.pointStyle = POINT_STYLES[i % POINT_STYLES.length];
+                    if (!ds.pointRadius) ds.pointRadius = 4;
+                });
+            }
+        };
+
+        function applyA11y(rerender = true) {
+            const root = document.documentElement;
+            root.classList.toggle('a11y-contrast', a11y.contrast);
+            root.classList.toggle('a11y-large', a11y.largeText);
+            root.classList.toggle('a11y-reduce-motion', a11y.reduceMotion);
+            root.classList.toggle('a11y-colorsafe', a11y.colorSafe);
+            const st = pal().status;
+            root.style.setProperty('--good', st.good);
+            root.style.setProperty('--warn', st.warn);
+            root.style.setProperty('--bad', st.bad);
+            COMPARISON_COLORS = catColors().slice(0, 5);
+            if (window.Chart) {
+                Chart.defaults.animation = a11y.reduceMotion ? false : {};
+                Chart.defaults.font.size = a11y.largeText ? 14 : 12;
+                Chart.defaults.color = a11y.contrast ? '#000000' : '#666666';
+                Chart.defaults.borderColor = a11y.contrast ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.1)';
+            }
+            document.querySelectorAll('#a11yPanel input[data-a11y]').forEach(cb => { cb.checked = !!a11y[cb.dataset.a11y]; });
+            if (rerender && studentData) {
+                refreshCharts();
+                if (document.getElementById('heatmap')?.classList.contains('active')) generateHeatmapView();
+                if (document.getElementById('comparisons')?.classList.contains('active')) { updateDatePills(); renderComparison(); }
+            }
+        }
+
+        function setA11y(key, value) {
+            a11y[key] = value;
+            try { localStorage.setItem('bvt-a11y', JSON.stringify(a11y)); } catch (e) { /* storage unavailable */ }
+            applyA11y();
+        }
+
+        function resetA11y() {
+            a11y = { ...A11Y_DEFAULTS };
+            try { localStorage.removeItem('bvt-a11y'); } catch (e) { /* storage unavailable */ }
+            applyA11y();
+        }
+
+        function toggleA11yPanel(force) {
+            const panel = document.getElementById('a11yPanel');
+            const open = force !== undefined ? force : panel.hidden;
+            panel.hidden = !open;
+            document.getElementById('a11yButton').setAttribute('aria-expanded', String(open));
+            if (open) panel.querySelector('input')?.focus();
+        }
+
+        if (window.Chart) Chart.register(a11yPatternPlugin);
+        document.addEventListener('DOMContentLoaded', () => applyA11y(false));
+
+        // Give icon-only buttons (e.g. ⛶ expand) a spoken label for screen readers
+        function labelIconButtons(root = document) {
+            root.querySelectorAll('button.chart-expand-btn:not([aria-label])').forEach(b => { b.setAttribute('aria-label', 'Expand'); b.title = b.title || 'Expand'; });
+        }
+        new MutationObserver(() => labelIconButtons()).observe(document.documentElement, { childList: true, subtree: true });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { toggleA11yPanel(false); } });
+        document.addEventListener('click', e => {
+            const panel = document.getElementById('a11yPanel');
+            if (panel && !panel.hidden && !panel.contains(e.target) && e.target.id !== 'a11yButton') toggleA11yPanel(false);
+        });
+
+
         let allCategoryNames = [];
         let enabledCategories = new Set();
         let hiddenTrackingSlots = new Set();
@@ -1672,7 +1818,7 @@
             refreshCharts();
         }
 
-        const COMPARISON_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+        let COMPARISON_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
         const SLOT_LABELS = ['Arrival', '8:00', '8:10', '8:20', '8:40', '9:00', '9:20', '9:40', '10:00', '10:20', '10:40', '11:00', '11:15', '11:30', '11:45', '12:00', '12:20', '12:40', '1:00', '1:20', '1:40', '2:00', '2:10', '2:20', 'Dismissal'];
 
         // ---------- Date Comparison: calendar picker ----------
@@ -2025,7 +2171,7 @@
         function comparisonSeriesHourly(day) {
             // For hourly with selected metrics, return array of datasets
             const datasets = [];
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#d946ef'];
+            const colors = catColors();
             let colorIdx = 0;
 
             selectedComparisonMetrics.forEach(metric => {
@@ -2160,7 +2306,7 @@
                 return;
             }
 
-            const colors = ['#3b82f6', '#ef4444', '#f59e0b'];
+            const colors = catColors();
 
             // Create one chart per day
             days.forEach((day, dayIdx) => {
@@ -2278,7 +2424,7 @@
 
             // Create a chart for each tracking metric, showing all days' data
             let html = '<div class="charts-grid">';
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+            const colors = catColors();
 
             trackingMeta.forEach((meta, idx) => {
                 const canvasId = 'trk-' + meta.slot + '-canvas';
@@ -2386,7 +2532,7 @@
                     const cd = day.categories && day.categories[cat];
                     return cd ? cd.percentage : 0;
                 }),
-                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][idx % 4]
+                backgroundColor: catColors()[idx % 4]
             }));
             return { axisLabels, datasets };
         }
@@ -2416,7 +2562,7 @@
                     const t = day.tracking && day.tracking[meta.slot];
                     return t ? (t.value || 0) : 0;
                 }),
-                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][idx % 4]
+                backgroundColor: catColors()[idx % 4]
             }));
             return { axisLabels, datasets };
         }
@@ -2595,8 +2741,7 @@
                             const slotValues = metricData[date];
                             const value = slotValues && slotValues[slotIdx] !== undefined ? slotValues[slotIdx] : 0;
                             const normalized = Math.max(0, Math.min(1, value));
-                            const hue = normalized * 120;
-                            const bgColor = `hsl(${hue}, 100%, ${50 - (normalized * 30)}%)`;
+                            const bgColor = getHeatmapColor(normalized);
                             const textColor = normalized > 0.5 ? 'white' : '#1e293b';
                             return `<td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; background-color: ${bgColor}; color: ${textColor}; font-weight: 500; min-width: 100px;">${typeof value === 'number' ? value.toFixed(1) : value}</td>`;
                         }).join('')}
@@ -3001,17 +3146,20 @@
             });
         }
 
+        // 0 (worst) → 1 (best). Standard: red → yellow → green. Colorblind-safe: orange → light → blue.
         function getHeatmapColor(normalized) {
-            // Red-Yellow-Green spectrum: 0 (red) → 0.5 (yellow) → 1 (green)
-            let hue;
-            if (normalized < 0.5) {
-                hue = normalized * 120; // 0 to 60 degrees (red to yellow)
-            } else {
-                hue = 60 + (normalized - 0.5) * 120; // 60 to 120 degrees (yellow to green)
+            const t = Math.max(0, Math.min(1, normalized));
+            if (a11y.colorSafe) {
+                const stops = [[0, [179, 88, 6]], [0.25, [224, 130, 20]], [0.5, [216, 218, 235]], [0.75, [103, 169, 207]], [1, [33, 102, 172]]];
+                let k = 0;
+                while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+                const [t0, c0] = stops[k], [t1, c1] = stops[k + 1];
+                const f = (t - t0) / (t1 - t0);
+                const c = c0.map((v, i) => Math.round(v + (c1[i] - v) * f));
+                return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
             }
-            const saturation = 85;
-            const lightness = 45;
-            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            const hue = t < 0.5 ? t * 120 : 60 + (t - 0.5) * 120;
+            return `hsl(${hue}, 85%, 45%)`;
         }
 
         function renderTimeslotHeatmap() {
@@ -3561,7 +3709,7 @@
                                                 <tr>
                                                     <td style="padding: 12px 16px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${day.date.toLocaleDateString()} • ${catName}</td>
                                                     ${slots.map(val => {
-                                                        const bgColor = val === 1 ? '#10b981' : '#ef4444';
+                                                        const bgColor = val === 1 ? statusColor('good') : statusColor('bad');
                                                         return `<td style="padding: 4px; border: 1px solid #e2e8f0; background-color: ${bgColor}; min-width: 22px; height: 24px;"></td>`;
                                                     }).join('')}
                                                     <td style="padding: 12px 16px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; background-color: ${percentBgColor}; color: ${percentTextColor};">${percentage}%</td>
@@ -4190,7 +4338,7 @@
                     }
                     return 0;
                 });
-                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+                const colors = catColors();
                 return {
                     label: cat,
                     data,
@@ -4237,7 +4385,7 @@
             }
 
             const categories = Array.from(enabledCategories);
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+            const colors = catColors();
             const avgData = categories.map(cat => {
                 let sum = 0;
                 let count = 0;
@@ -4283,7 +4431,7 @@
 
             const days = filteredDays || studentData.days;
             const sel = document.getElementById('todCategorySelect')?.value || '__all__';
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+            const colors = catColors();
 
             // Helper: average a per-slot getter across all days
             const avgSlots = (getSlots) => {
@@ -4334,17 +4482,17 @@
                     {
                         label: 'Frequency',
                         data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.freqSlots[slot] : null; }),
-                        backgroundColor: '#ef4444cc', borderColor: '#ef4444', borderWidth: 1
+                        backgroundColor: fdiColors().f + 'cc', borderColor: fdiColors().f, borderWidth: 1
                     },
                     {
                         label: 'Duration (min)',
                         data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.durSlots[slot] : null; }),
-                        backgroundColor: '#f59e0bcc', borderColor: '#f59e0b', borderWidth: 1
+                        backgroundColor: fdiColors().d + 'cc', borderColor: fdiColors().d, borderWidth: 1
                     },
                     {
                         label: 'Intensity (1–5)',
                         data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.intenSlots[slot] : null; }),
-                        backgroundColor: '#10b981cc', borderColor: '#10b981', borderWidth: 1
+                        backgroundColor: fdiColors().i + 'cc', borderColor: fdiColors().i, borderWidth: 1
                     }
                 ];
                 label = bipName;
@@ -4402,7 +4550,7 @@
                     })();
                     return Math.round(val);
                 });
-                const colors = ['#ef4444', '#f59e0b', '#10b981'];
+                const colors = (c => [c[3], c[2], c[1]])(catColors());
                 return {
                     label: goalName,
                     data,
@@ -4492,9 +4640,9 @@
                 });
 
                 const bipDatasets = [
-                    { label: 'Frequency', data: freq, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
-                    { label: 'Duration (min)', data: dur, borderColor: '#f59e0b', backgroundColor: '#f59e0b20', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
-                    { label: 'Intensity (1-5)', data: inten, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 }
+                    { label: 'Frequency', data: freq, borderColor: fdiColors().f, backgroundColor: fdiColors().f + '20', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
+                    { label: 'Duration (min)', data: dur, borderColor: fdiColors().d, backgroundColor: fdiColors().d + '20', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 },
+                    { label: 'Intensity (1-5)', data: inten, borderColor: fdiColors().i, backgroundColor: fdiColors().i + '20', tension: 0.4, cubicInterpolationMode: 'monotone', fill: false, borderWidth: 2 }
                 ];
                 const yRange = calcYAxisRange(bipDatasets, { integerOnly: true });
                 charts[key] = new Chart(canvas.getContext('2d'), {
@@ -4796,7 +4944,7 @@
                 html += '<p class="insights-section-title" style="margin-top: 28px;">📈 Category Performance</p>';
                 html += '<div class="insight-list">';
                 catInsights.forEach(ci => {
-                    const barColor = ci.avg >= 70 ? 'var(--secondary-color)' : ci.avg >= 50 ? 'var(--warning-color)' : 'var(--danger-color)';
+                    const barColor = statusColor(ci.avg >= 70 ? 'good' : ci.avg >= 50 ? 'warn' : 'bad');
                     html += `<div class="insight-list-row">
                         <div class="ilr-label" style="flex: 1; margin-right: 20px;">
                             ${escapeHtml(ci.name)}
@@ -4879,14 +5027,7 @@
                     });
 
                     // Color for individual points based on their value
-                    const getColorForValue = (v) => {
-                        if (v == null) return '#cccccc';
-                        if (v >= 80) return '#10b981';  // Green
-                        if (v >= 70) return '#fbbf24';  // Yellow
-                        if (v >= 60) return '#fb923c';  // Orange
-                        if (v >= 50) return '#f97316';  // Dark orange
-                        return '#ef4444';                // Red
-                    };
+                    const getColorForValue = (v) => v == null ? '#cccccc' : scoreColor(v);
 
                     // Calculate dynamic y-axis range based on data
                     const yRange = calcYAxisRange([{ data: overallAverages }], { isPercentage: true });
@@ -4897,12 +5038,12 @@
                         // Map gradient stops to actual visible y-range
                         const range = yRange.max - yRange.min;
                         const valueToPos = v => Math.max(0, Math.min(1, (yRange.max - v) / range));
-                        gradient.addColorStop(valueToPos(yRange.max), '#10b981');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 80)), '#10b981');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 70)), '#fbbf24');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 60)), '#fb923c');
-                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 50)), '#f97316');
-                        gradient.addColorStop(valueToPos(yRange.min), '#ef4444');
+                        gradient.addColorStop(valueToPos(yRange.max), scoreColor(100));
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 80)), scoreColor(80));
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 70)), scoreColor(70));
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 60)), scoreColor(60));
+                        gradient.addColorStop(valueToPos(Math.min(yRange.max, 50)), scoreColor(50));
+                        gradient.addColorStop(valueToPos(yRange.min), scoreColor(0));
                         return gradient;
                     };
 
@@ -4916,7 +5057,7 @@
                                 borderColor: function(context) {
                                     const chart = context.chart;
                                     const { ctx, chartArea } = chart;
-                                    if (!chartArea) return '#10b981';
+                                    if (!chartArea) return scoreColor(80);
                                     return createGradient(ctx, chartArea);
                                 },
                                 backgroundColor: 'transparent',
@@ -5147,7 +5288,7 @@
                 allCategoryNames.forEach(cat => {
                     const vals = days.map(d => d.categories && d.categories[cat] ? d.categories[cat].percentage : 0);
                     const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-                    const color = avg >= 70 ? '#10b981' : avg >= 50 ? '#f59e0b' : '#ef4444';
+                    const color = statusColor(avg >= 70 ? 'good' : avg >= 50 ? 'warn' : 'bad');
                     body += `<div class="cat-row"><span style="min-width: 2.4in;">${escapeHtml(cat)}</span>
                         <div class="cat-bar"><div class="cat-bar-fill" style="width: ${Math.min(100, avg).toFixed(1)}%; background: ${color};"></div></div>
                         <span style="font-weight: 700; color: ${color}; min-width: 0.6in; text-align: right;">${avg.toFixed(1)}%</span></div>`;
@@ -5373,6 +5514,25 @@
                 </div>
             </div>
         </div>
+    </div>
+    <button id="a11yButton" class="a11y-button" onclick="toggleA11yPanel()" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11yPanel">♿ Accessibility</button>
+    <div id="a11yPanel" class="a11y-panel" role="dialog" aria-label="Accessibility settings" hidden>
+        <h2>Accessibility</h2>
+        <label><input type="checkbox" data-a11y="colorSafe" onchange="setA11y('colorSafe', this.checked)">
+            <span><strong>Colorblind-safe colors</strong><small>Replaces red/green with orange/blue in charts, heatmaps and scores</small></span></label>
+        <label><input type="checkbox" data-a11y="patterns" onchange="setA11y('patterns', this.checked)">
+            <span><strong>Line patterns</strong><small>Each chart line gets its own dash style and point shape (also helps black-and-white printing)</small></span></label>
+        <label><input type="checkbox" data-a11y="contrast" onchange="setA11y('contrast', this.checked)">
+            <span><strong>High contrast</strong><small>Darker text, stronger borders and outlines</small></span></label>
+        <label><input type="checkbox" data-a11y="largeText" onchange="setA11y('largeText', this.checked)">
+            <span><strong>Larger text</strong><small>Bigger text across the app and in charts</small></span></label>
+        <label><input type="checkbox" data-a11y="reduceMotion" onchange="setA11y('reduceMotion', this.checked)">
+            <span><strong>Reduce motion</strong><small>Turns off chart animations and hover movement</small></span></label>
+        <div class="a11y-actions">
+            <button class="a11y-reset" onclick="resetA11y()">Reset</button>
+            <button class="a11y-close" onclick="toggleA11yPanel(false)">Done</button>
+        </div>
+        <p class="a11y-note">Saved in this browser. Keyboard: Tab moves between controls, Enter or Space activates, Esc closes this panel.</p>
     </div>
 </body>
 </html>
