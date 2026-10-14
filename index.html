@@ -568,6 +568,15 @@
         .hotspot-help { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.9rem; line-height: 1.6; color: #1e293b; }
         .hotspot-help p, .hotspot-help ul, .hotspot-help ol { margin: 4px 0 10px; }
         .hotspot-help ul, .hotspot-help ol { padding-left: 22px; }
+        .bip-switcher { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-bottom: 12px; }
+        .bip-switcher-label { align-self: center; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
+        .bip-view-btn { display: flex; flex-direction: column; align-items: flex-start; padding: 8px 12px; border: 2px solid #c7d2fe; background: white; border-radius: 10px; cursor: pointer; text-align: left; color: #1e293b; }
+        .bip-view-btn small { color: #475569; font-size: 0.75rem; }
+        .bip-view-btn.on { border-color: var(--primary-color); background: #eef2ff; }
+        .bip-help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .bip-help p { margin: 4px 0 0; }
+        @media (max-width: 900px) { .bip-help { grid-template-columns: 1fr; } }
+        .bip-takeaway { background: #fffbeb; border: 1px solid #fcd34d; border-left: 5px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #1e293b; line-height: 1.6; }
         .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
             overflow-x: auto;
@@ -915,10 +924,10 @@
                                 <option value="category-overview">Category Overview — All categories across dates</option>
                                 <option value="timeslot-average">Time Slot Averages — Average performance for each slot</option>
                                 <option value="daily-summary">Daily Summary — Performance by date and category</option>
-                                <option value="bip-hotspots">BIP Hotspots — Where behaviors recur across many dates</option>
-                                <option value="bip-timeslot">BIP by Time of Day — One goal, by slot across dates</option>
-                                <option value="bip-average">BIP Time Slot Averages — Average for each slot, all goals</option>
-                                <option value="bip-daily">BIP Daily Overview — Daily totals for all goals</option>
+                                <option value="bip-hotspots">BIP Hotspots — When does each behavior keep happening?</option>
+                                <option value="bip-timeslot">BIP Day by Day — What time did a behavior happen on each day?</option>
+                                <option value="bip-average">BIP Time Slot Averages — Which times of day average the most?</option>
+                                <option value="bip-daily">BIP Daily Totals — Which days had the most?</option>
                             </select>
                         </div>
 
@@ -2830,21 +2839,11 @@
 
             if (type === 'bip-hotspots') {
                 configPanel.innerHTML = `
-                    <div class="hotspot-help">
-                        <strong>🔥 What this shows</strong>
-                        <p>Instead of listing every date, this finds the <strong>times of day</strong> and <strong>days of the week</strong> when each BIP behavior keeps happening across many dates.</p>
-                        <ul>
-                            <li><strong>Time slots:</strong> looks only at the days the behavior happened, and asks “on how many of those days did it happen at this time?” Example: <em>happened at 10:40 on 6 of the 10 days it occurred (60%)</em>.</li>
-                            <li><strong>Days of the week:</strong> uses each day's totals. Example: <em>occurred on 4 of 5 Mondays (80%), compared with 30% of all days</em>.</li>
-                            <li>An empty time-slot cell counts as “didn't happen”.</li>
-                        </ul>
-                        <strong>How to use it</strong>
-                        <ol>
-                            <li>Set the date range on the Settings tab (or in the header) — only those days are counted.</li>
-                            <li>Pick how strong a pattern must be below. Lower settings show more possible patterns; higher settings show only the strongest.</li>
-                            <li>Read the two grids, then the ranked list at the bottom. Hover a cell to see the exact day counts.</li>
-                        </ol>
-                    </div>
+                    ${bipHelp('bip-hotspots', {
+                        what: 'Instead of every date, only the <strong>times of day</strong> and <strong>days of the week</strong> when a behavior keeps happening.',
+                        read: '<strong>Time slots:</strong> of the days a behavior happened, the % when it happened at that time (e.g. <em>10:40 on 6 of the 10 days it happened = 60%</em>). <strong>Weekdays:</strong> the % of those weekdays it happened at all. Colored squares are hotspots; faded ones are below your settings. An empty time-slot box counts as “didn\'t happen”.',
+                        use: 'find the times and days to focus on. Start with the plain-English list at the bottom; lower the settings below to see weaker patterns.'
+                    })}
                     <label><strong>Count something as a hotspot when it happened on at least:</strong></label>
                     <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
                         <label style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
@@ -2861,8 +2860,12 @@
                     </div>
                     <p class="hotspot-key" style="margin-top: 8px;">The minimum number of days keeps one-off coincidences (like 2 out of 2) from showing up as patterns.</p>`;
             } else if (type === 'bip-timeslot') {
-                configPanel.innerHTML = `
-                    <label><strong>BIP goal:</strong></label>
+                configPanel.innerHTML = bipHelp('bip-timeslot', {
+                    what: 'One BIP behavior, one row per school day and one column per time slot (Arrival to Dismissal).',
+                    read: BIP_COLOR_KEY + ' Read across a row to see that day; read down a column to see that time slot across all days. A column that is dark on many rows is a time worth watching.',
+                    use: 'see exactly when a behavior happened on specific days, e.g. before a meeting or to check an incident report.'
+                }) + `
+                    <label><strong>Behavior:</strong></label>
                     <div style="margin: 10px 0 16px;">
                         <select id="bipHeatGoal" onchange="renderBipTimeslotHeatmap()" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
                             ${getBipGoalNames().map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
@@ -2870,9 +2873,17 @@
                     </div>
                     ${bipMetricRadios('renderBipTimeslotHeatmap')}`;
             } else if (type === 'bip-average') {
-                configPanel.innerHTML = bipMetricRadios('renderBipAverageHeatmap');
+                configPanel.innerHTML = bipHelp('bip-average', {
+                    what: 'All BIP behaviors, one row each, with one column per time slot. Each square is the <strong>average</strong> for that time slot across the selected days.',
+                    read: BIP_COLOR_KEY + ' The darkest squares in a row are the times that behavior is usually highest.',
+                    use: 'plan supports or schedule changes around the times of day that are hardest on average.'
+                }) + bipMetricRadios('renderBipAverageHeatmap');
             } else if (type === 'bip-daily') {
-                configPanel.innerHTML = bipMetricRadios('renderBipDailyHeatmap');
+                configPanel.innerHTML = bipHelp('bip-daily', {
+                    what: 'All BIP behaviors, one row each, with one column per school day. Each square is that day\'s <strong>total</strong> from the point sheet.',
+                    read: 'Pale = 0 (it didn\'t happen), <strong>darker red = more</strong>. Look for dark streaks (several bad days in a row) or long pale stretches (good runs).',
+                    use: 'spot bad days, streaks and changes after an intervention. Works even when the time-slot boxes aren\'t filled in.'
+                }) + bipMetricRadios('renderBipDailyHeatmap');
             }
 
             // Render appropriate heatmap
@@ -2895,6 +2906,32 @@
                 case 'bip-daily': renderBipDailyHeatmap(); break;
             }
         }
+
+        // Shared explanation box and view switcher for the four BIP heatmap views
+        const BIP_VIEWS = [
+            { id: 'bip-hotspots', short: '🔥 Hotspots', q: 'When does it keep happening?' },
+            { id: 'bip-timeslot', short: '📅 Day by day', q: 'What time, on each day?' },
+            { id: 'bip-average', short: '⏰ Time averages', q: 'Which times average the most?' },
+            { id: 'bip-daily', short: '📆 Daily totals', q: 'Which days had the most?' }
+        ];
+        function switchBipView(id) {
+            document.getElementById('heatmapType').value = id;
+            generateHeatmapView();
+        }
+        function bipHelp(current, { what, read, use }) {
+            return `
+                <div class="bip-switcher" role="group" aria-label="BIP views">
+                    <span class="bip-switcher-label">BIP views:</span>
+                    ${BIP_VIEWS.map(v => `<button class="bip-view-btn${v.id === current ? ' on' : ''}" onclick="switchBipView('${v.id}')" aria-pressed="${v.id === current}">
+                        <strong>${v.short}</strong><small>${v.q}</small></button>`).join('')}
+                </div>
+                <div class="hotspot-help bip-help">
+                    <div><strong>What it shows</strong><p>${what}</p></div>
+                    <div><strong>How to read it</strong><p>${read}</p></div>
+                    <div><strong>Use it to</strong><p>${use}</p></div>
+                </div>`;
+        }
+        const BIP_COLOR_KEY = 'Each square is colored by amount: <strong>pale = 0</strong> (it didn\'t happen), <strong>darker red = more</strong>, <strong>grey = nothing written down</strong>. Hover over a square for details.';
 
         // ---------- BIP heatmaps ----------
         // For BIP goals higher = worse, so the scale runs from pale (0 = didn't occur) to dark red (max).
@@ -2929,7 +2966,7 @@
         }
 
         // rows: [{ label, values: [number|null] }], columns: [string]
-        function renderBipHeatTable({ title, rowHeader, columns, rows, decimals = 0, emptyMessage }) {
+        function renderBipHeatTable({ title, rowHeader, columns, rows, decimals = 0, emptyMessage, takeaway }) {
             const resultsPanel = document.getElementById('heatmapResults');
             const all = rows.flatMap(r => r.values).filter(v => v !== null);
             if (rows.length === 0 || all.length === 0) {
@@ -2950,18 +2987,19 @@
                             <button class="chart-print-btn" onclick="printHeatmap('heatmap-bip')">🖨️ Print</button>
                         </div>
                     </div>
+                    ${takeaway ? `<div class="bip-takeaway"><strong>💡 What this tells you:</strong> ${takeaway}</div>` : ''}
                     <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 15px; font-size: 0.85rem; flex-wrap: wrap;">
-                        ${swatch('#94a3b8', 'Not recorded')}
-                        ${legendStops.map(s => swatch(getBipHeatColor(s.t), s.t === 0 ? '0 (did not occur)' : fmtV(s.v) + (s.t === 1 ? ' (highest)' : ''))).join('')}
+                        ${swatch('#94a3b8', 'Nothing written down')}
+                        ${legendStops.map(s => swatch(getBipHeatColor(s.t), s.t === 0 ? '0 (didn\'t happen)' : fmtV(s.v) + (s.t === 1 ? ' (highest)' : ''))).join('')}
                     </div>
                     <div class="heatmap-scroll">
                         <table id="heatmap-bip" class="bip-heat">
                             <thead><tr><th>${escapeHtml(rowHeader)}</th>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
                             <tbody>
-                                ${rows.map(r => `<tr><td>${escapeHtml(r.label)}</td>${r.values.map(v => {
-                                    if (v === null) return '<td class="na"></td>';
+                                ${rows.map(r => `<tr><td>${escapeHtml(r.label)}</td>${r.values.map((v, ci) => {
+                                    if (v === null) return `<td class="na" title="${escapeHtml(r.label)} · ${escapeHtml(columns[ci])}: nothing written down"></td>`;
                                     const t = max > 0 ? v / max : 0;
-                                    return `<td style="background: ${getBipHeatColor(t)}; color: ${t > 0.6 ? 'white' : '#1e293b'};">${fmtV(v)}</td>`;
+                                    return `<td style="background: ${getBipHeatColor(t)}; color: ${t > 0.6 ? 'white' : '#1e293b'};" title="${escapeHtml(r.label)} · ${escapeHtml(columns[ci])}: ${fmtV(v)}">${fmtV(v)}</td>`;
                                 }).join('')}</tr>`).join('')}
                             </tbody>
                         </table>
@@ -3078,7 +3116,11 @@
 
             const overallLine = `<p class="hotspot-key" style="margin-top: 12px;">Overall: ${goals.map((g, i) =>
                 `${escapeHtml(g)} occurred on ${overall[i].occurred} of ${overall[i].recorded} days (${pct(overall[i].rate)})`).join(' · ')}</p>`;
-            resultsPanel.innerHTML =
+            const top = hotspots[0];
+            const takeaway = top
+                ? `<div class="bip-takeaway" style="margin-top: 20px;"><strong>💡 What this tells you:</strong> the strongest pattern is <strong>${escapeHtml(top.name)}</strong> ${top.kind === 'slot' ? 'at <strong>' + top.where + '</strong>' : 'on <strong>' + top.where + '</strong>'} (${pct(top.rate)}). ${hotspots.length > 1 ? `${hotspots.length - 1} more pattern${hotspots.length > 2 ? 's are' : ' is'} listed at the bottom.` : ''}</div>`
+                : `<div class="bip-takeaway" style="margin-top: 20px;"><strong>💡 What this tells you:</strong> no strong patterns with the current settings. Try a lower percentage above.</div>`;
+            resultsPanel.innerHTML = takeaway +
                 card('Which time slots?', 'heatmap-bip-hot-slot', anySlotData
                     ? `<p class="hotspot-key"><strong>What the numbers mean:</strong> of the days each behavior happened, the % of those days it happened in that time slot. <strong>Colored</strong> = hotspot (meets your settings) · <strong>faded</strong> = below your settings · <strong>grey</strong> = the behavior never happened in this date range.</p>${grid('heatmap-bip-hot-slot', SLOT_LABELS, slotStats)}`
                     : '<p style="color: var(--text-secondary);">No time-slot BIP data was recorded, so only day-of-week patterns can be shown.</p>') +
@@ -3097,9 +3139,20 @@
                 const slots = g && g[slotsKey] ? g[slotsKey] : [];
                 return { label: day.date.toLocaleDateString(), values: SLOT_LABELS.map((_, i) => slots[i] ?? null) };
             });
+            const mLabel = BIP_METRICS[metric].label.toLowerCase();
+            const slotTotals = SLOT_LABELS.map((_, i) => rows.reduce((t, r) => t + (r.values[i] || 0), 0));
+            const slotDays = SLOT_LABELS.map((_, i) => rows.filter(r => (r.values[i] || 0) > 0).length);
+            const dayTotals = rows.map(r => r.values.reduce((t, v) => t + (v || 0), 0));
+            const activeDays = dayTotals.filter(t => t > 0).length;
+            const topSlot = slotTotals.indexOf(Math.max(...slotTotals));
+            const topDay = dayTotals.indexOf(Math.max(...dayTotals));
+            const takeaway = activeDays === 0 ? `No ${mLabel} was recorded for ${escapeHtml(goal || '')} in these dates.`
+                : `${escapeHtml(goal)} happened on <strong>${activeDays} of ${rows.length} days</strong>. The busiest time was <strong>${SLOT_LABELS[topSlot]}</strong>
+                   (${mLabel} on ${slotDays[topSlot]} day${slotDays[topSlot] === 1 ? '' : 's'}, total ${Math.round(slotTotals[topSlot] * 10) / 10}), and the busiest day was
+                   <strong>${rows[topDay].label}</strong> (total ${Math.round(dayTotals[topDay] * 10) / 10}).`;
             renderBipHeatTable({
                 title: `${goal || 'BIP'} — ${BIP_METRICS[metric].label} by Time Slot`,
-                rowHeader: 'Date', columns: SLOT_LABELS, rows,
+                rowHeader: 'Date', columns: SLOT_LABELS, rows, takeaway,
                 emptyMessage: goal
                     ? `No time-slot ${BIP_METRICS[metric].label.toLowerCase()} data was recorded for this goal. If staff only fill in the daily total, use <strong>BIP Daily Overview</strong> instead.`
                     : 'No BIP goals found in this file.'
@@ -3122,9 +3175,16 @@
                     return n ? sum / n : null;
                 })
             }));
+            const parts = rows.map(r => {
+                const vals = r.values.map(v => v ?? -1);
+                const best = Math.max(...vals);
+                if (best <= 0) return null;
+                return `<strong>${escapeHtml(r.label)}</strong> is highest at <strong>${SLOT_LABELS[vals.indexOf(best)]}</strong> (average ${best.toFixed(2)})`;
+            }).filter(Boolean);
             renderBipHeatTable({
                 title: `Average BIP ${BIP_METRICS[metric].label} by Time Slot`,
                 rowHeader: 'BIP Goal', columns: SLOT_LABELS, rows, decimals: 2,
+                takeaway: parts.length ? parts.join('; ') + '.' : null,
                 emptyMessage: 'No time-slot BIP data was recorded. If staff only fill in the daily total, use <strong>BIP Daily Overview</strong> instead.'
             });
         }
@@ -3139,7 +3199,16 @@
                     return g ? (g[metric] || 0) : null;
                 })
             }));
+            const dayLabels = filteredDays.map(d => d.date.toLocaleDateString());
+            const dParts = rows.map(r => {
+                const vals = r.values.map(v => v || 0);
+                const on = vals.filter(v => v > 0).length;
+                if (!on) return `<strong>${escapeHtml(r.label)}</strong>: none in these dates`;
+                const hi = Math.max(...vals);
+                return `<strong>${escapeHtml(r.label)}</strong>: happened on ${on} of ${vals.length} days, highest on <strong>${dayLabels[vals.indexOf(hi)]}</strong> (${Math.round(hi * 10) / 10})`;
+            });
             renderBipHeatTable({
+                takeaway: dParts.join('; ') + '.',
                 title: `BIP Daily ${BIP_METRICS[metric].label} Totals`,
                 rowHeader: 'BIP Goal', columns: filteredDays.map(d => d.date.toLocaleDateString()), rows,
                 emptyMessage: 'No BIP goals found in this file.'
