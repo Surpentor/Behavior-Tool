@@ -508,7 +508,9 @@
         .bip-heat td:first-child, .bip-heat th:first-child { text-align: left; background: white; min-width: 130px; white-space: nowrap; color: #334155; }
         .bip-heat td.na { background: #94a3b8; }
         .bip-heat td.cold { color: #cbd5e1; background: #f8fafc; }
-        .hotspot-list { margin: 0; padding-left: 24px; line-height: 1.9; }
+        .hotspot-list { margin: 0; padding-left: 24px; line-height: 1.9; columns: 2; column-gap: 40px; }
+        .hotspot-list li { break-inside: avoid; }
+        @media (max-width: 800px) { .hotspot-list { columns: 1; } }
         .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
             overflow-x: auto;
@@ -2802,12 +2804,12 @@
             const overallLine = `<p class="hotspot-key" style="margin-top: 12px;">Overall: ${goals.map((g, i) =>
                 `${escapeHtml(g)} occurred on ${overall[i].occurred} of ${overall[i].recorded} days (${pct(overall[i].rate)})`).join(' · ')}</p>`;
             resultsPanel.innerHTML =
-                card(`🔥 Hotspots (${hotspots.length})`, null, list + overallLine) +
                 card('By Time Slot', 'heatmap-bip-hot-slot', anySlotData
                     ? `<p class="hotspot-key">Colored cells are hotspots: % of recorded days the behavior occurred in that slot. Grey = nothing recorded; faded = below threshold.</p>${grid('heatmap-bip-hot-slot', SLOT_LABELS, slotStats)}`
                     : '<p style="color: var(--text-secondary);">No time-slot BIP data was recorded, so only day-of-week patterns can be shown.</p>') +
                 card('By Day of Week', 'heatmap-bip-hot-day',
-                    `<p class="hotspot-key">% of recorded days the behavior occurred (from daily totals). A day is colored only when it is at least 15 points above that goal's overall rate.</p>${grid('heatmap-bip-hot-day', WEEKDAYS, dayStats)}`);
+                    `<p class="hotspot-key">% of recorded days the behavior occurred (from daily totals). A day is colored only when it is at least 15 points above that goal's overall rate.</p>${grid('heatmap-bip-hot-day', WEEKDAYS, dayStats)}`) +
+                card(`🔥 Hotspots (${hotspots.length})`, null, list + overallLine);
         }
 
         // Dates × time slots for one goal
