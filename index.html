@@ -1133,7 +1133,7 @@
                     const workbook = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
                     const data = parseMultiSheetXlsx(workbook);
                     if (data.days.length === 0) {
-                        showMessage('No school days were found in this file. Make sure it's a student point sheet with dated day blocks.', 'error');
+                        showMessage('No school days were found in this file. Make sure this is a student point sheet with dated day blocks.', 'error');
                         return;
                     }
                     studentData = data;
