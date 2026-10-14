@@ -501,7 +501,8 @@
         /* Give summary tab full-bleed so the table can use all available space */
         #summary.tab-content { padding: 20px 12px; }
         .summary-table {
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             width: 100%;
             font-size: 0.78rem;
             table-layout: auto;
@@ -568,6 +569,8 @@
             border-top: 2px solid var(--secondary-color);
         }
         .summary-table tr.avg-row td.date-col { background: #d1fae5 !important; }
+        .summary-table tr.total-row td { background: #eef2ff !important; font-weight: 700; }
+        .summary-table tr.total-row td.date-col { background: #e0e7ff !important; }
 
         @media print {
             body { background: white; padding: 0; }
@@ -1518,6 +1521,9 @@
                     // Initialize heatmap when heatmap tab is opened
                     if (e.target.dataset.tab === 'heatmap') {
                         generateHeatmapView();
+                    }
+                    if (e.target.dataset.tab === 'summary') {
+                        pinSummaryHeaderRows();
                     }
                 });
             });
@@ -2689,7 +2695,7 @@
             // Calculate max points and max possible for each category/day based on presentSlots
             let maxPoints = 0;
             filteredDays.forEach(day => {
-                Array.from(enabledCategories).forEach(cat => {
+                allCategoryNames.forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
                         const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
@@ -2740,7 +2746,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${Array.from(enabledCategories).map(cat => `
+                            ${allCategoryNames.map(cat => `
                                 <tr>
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.85rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
@@ -2763,7 +2769,7 @@
                                     let totalPoints = 0;
                                     let totalPossible = 0;
                                     let hasData = false;
-                                    Array.from(enabledCategories).forEach(cat => {
+                                    allCategoryNames.forEach(cat => {
                                         const catData = day.categories && day.categories[cat];
                                         if (catData && catData.slots && catData.presentSlots > 0) {
                                             const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
@@ -2965,7 +2971,7 @@
             // Calculate max points for normalization
             let maxPoints = 0;
             filteredDays.forEach(day => {
-                Array.from(enabledCategories).forEach(cat => {
+                allCategoryNames.forEach(cat => {
                     const catData = day.categories && day.categories[cat];
                     if (catData && catData.slots) {
                         const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
@@ -3016,7 +3022,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${Array.from(enabledCategories).map(cat => `
+                            ${allCategoryNames.map(cat => `
                                 <tr>
                                     <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 500; background: white; position: sticky; left: 0; z-index: 5; color: #334155; font-size: 0.8rem; border-right: 3px solid white; box-shadow: 2px 0 0 white;">${cat}</td>
                                     ${filteredDays.map(day => {
@@ -3039,7 +3045,7 @@
                                     let totalPoints = 0;
                                     let totalPossible = 0;
                                     let hasData = false;
-                                    Array.from(enabledCategories).forEach(cat => {
+                                    allCategoryNames.forEach(cat => {
                                         const catData = day.categories && day.categories[cat];
                                         if (catData && catData.slots && catData.presentSlots > 0) {
                                             const points = catData.slots.reduce((sum, val) => sum + (val != null ? val : 0), 0);
@@ -3613,10 +3619,36 @@
                 avg += `<td>${cnti > 0 ? fmt((sums[ki] || 0) / cnti) : '—'}</td>`;
             });
 
+            // Totals row: BIP frequency and duration only (summed intensity isn't meaningful)
+            let totalRow = '';
+            if (bipNames.length) {
+                totalRow = `<td class="date-col">Total (${n} days)</td>`;
+                cats.forEach(() => totalRow += '<td></td>');
+                tracking.forEach(() => totalRow += '<td></td>');
+                bipNames.forEach(name => {
+                    totalRow += `<td>${fmt(sums['bipF:' + name] || 0)}</td><td>${fmt(sums['bipD:' + name] || 0)}</td><td>—</td>`;
+                });
+                totalRow = `<tr class="total-row">${totalRow}</tr>`;
+            }
+
             table.innerHTML =
                 `<thead>${groupRow}${metricRow}</thead>` +
-                `<tbody>${body}<tr class="avg-row">${avg}</tr></tbody>`;
+                `<tbody>${body}<tr class="avg-row">${avg}</tr>${totalRow}</tbody>`;
+            pinSummaryHeaderRows();
         }
+
+        // Both header rows are sticky; offset the second row by the first row's height
+        // so it pins directly below it instead of sliding underneath.
+        function pinSummaryHeaderRows() {
+            const table = document.getElementById('summaryTable');
+            const rows = table ? table.tHead && table.tHead.rows : null;
+            if (!rows || rows.length < 2) return;
+            const h = rows[0].querySelector('th.group-head:not(.date-col)')?.getBoundingClientRect().height
+                || rows[0].getBoundingClientRect().height;
+            if (!h) return; // table is on a hidden tab; re-run when shown
+            Array.from(rows[1].cells).forEach(th => { th.style.top = h + 'px'; });
+        }
+        window.addEventListener('resize', pinSummaryHeaderRows);
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c =>
@@ -3659,6 +3691,17 @@
                 });
                 rows.push(cells.map(csvCell).join(','));
             });
+            if (bipNames.length) {
+                const total = ['Total'];
+                cats.forEach(() => total.push(''));
+                tracking.forEach(() => total.push(''));
+                bipNames.forEach(name => {
+                    let f = 0, d = 0;
+                    days.forEach(day => { const g = day.bipGoals.find(x => x.name === name); if (g) { f += g.frequency || 0; d += g.duration || 0; } });
+                    total.push(round(f), round(d), '');
+                });
+                rows.push(total.map(csvCell).join(','));
+            }
 
             const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -3799,7 +3842,7 @@
             let datasets, label, yAxisLabel;
 
             if (sel === '__all__') {
-                const catsToShow = allCategoryNames.filter(c => enabledCategories.has(c));
+                const catsToShow = allCategoryNames.slice();
                 datasets = catsToShow.map((cat, idx) => ({
                     label: cat,
                     data: avgSlots((day, slot) => { const cd = day.categories && day.categories[cat]; return (cd && cd.slots) ? cd.slots[slot] : null; }),
@@ -4608,6 +4651,7 @@
                 tbody tr:nth-child(even) td { background: #fafbfc; }
                 td:first-child, th:first-child { text-align: left; white-space: nowrap; }
                 tr.avg-row td { font-weight: 700; background: #ecfdf5 !important; border-top: 2px solid #10b981; }
+                tr.total-row td { font-weight: 700; background: #eef2ff !important; }
                 .dq-item { padding: 5px 8px; border-left: 3px solid #f59e0b; background: #fffbeb; margin-bottom: 5px; break-inside: avoid; }
                 @media screen { body { padding: 0.5in 0; } }
             </style></head><body>`;
@@ -4671,7 +4715,7 @@
                 if (tracking.length) blocks.push({ title: 'Custom Tracking', cols: tracking.map(t => ({ head: t.label, get: d => {
                     const td = d.tracking && d.tracking[t.slot]; return td ? (td.value || 0) : 0; } })) });
                 bipNames.forEach(name => blocks.push({ title: name, cols: ['frequency', 'duration', 'intensity'].map(f => ({
-                    head: f[0].toUpperCase() + f.slice(1),
+                    head: f[0].toUpperCase() + f.slice(1), total: f !== 'intensity',
                     get: d => { const g = d.bipGoals.find(x => x.name === name); return g ? g[f] : 0; } })) }));
 
                 const MAX_COLS = 10;
@@ -4702,7 +4746,13 @@
                     });
                     body += '</tbody><tfoot><tr class="avg-row"><td>Average</td>';
                     cols.forEach((c, i) => body += `<td>${counts[i] ? fmt(sums[i] / counts[i]) : '—'}</td>`);
-                    body += '</tr></tfoot></table></div>';
+                    body += '</tr>';
+                    if (cols.some(c => c.total)) {
+                        body += '<tr class="total-row"><td>Total</td>';
+                        cols.forEach((c, i) => body += `<td>${c.total ? fmt(sums[i]) : ''}</td>`);
+                        body += '</tr>';
+                    }
+                    body += '</tfoot></table></div>';
                 });
                 html += section('Day-by-Day Summary', body, 'page-start');
             }

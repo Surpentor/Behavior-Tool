@@ -17,13 +17,13 @@ Needs internet access to load two libraries from jsDelivr:
 1. Click the upload area and choose the student's workbook.
 2. Browse the tabs:
    - **Insights** – overall average trend (peaks/valleys highlighted) and category averages
-   - **Categories** – per-category trend and performance charts
+   - **Categories** – per-category trend and performance charts (the category checkboxes here only filter this tab)
    - **Time-of-Day** – average score per time slot
    - **BIP Goals** – frequency, duration and intensity per goal
    - **Custom Tracking** – the three free-form tracking rows
    - **Heatmap** – time-slot, category, average and daily-summary heatmaps
    - **Date Comparison** – compare chosen days side by side
-   - **Summary Table** – per-day table, exportable to CSV
+   - **Summary Table** – per-day table with pinned headers and Date column, averages, and BIP frequency/duration totals; exportable to CSV
    - **Settings** – date range filter, fix a single day's date, show/hide tracking rows, data-quality notes
 3. Use **expand** or **print** on any chart, or **Print Full Report** (see below).
 
