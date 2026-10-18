@@ -922,7 +922,7 @@
                     <div class="charts-grid">
                         <div class="chart-container" style="grid-column: 1 / -1;">
                             <div class="chart-header">
-                                <h3 class="chart-title">🎯 BIP Goals Tracking</h3>
+                                <h3 class="chart-title" id="bipGoalsTitle">🎯 BIP Goals — Frequency</h3>
                                 <div style="display: flex; gap: 8px;">
                                     <button class="chart-expand-btn" onclick="expandChart('bipGoals')">⛶</button>
                                     <button class="chart-print-btn" onclick="printChart('bipGoals')">Print</button>
@@ -4160,7 +4160,7 @@
                     html += `
                         <div class="chart-container">
                             <div class="chart-header">
-                                <h3 class="chart-title">🎯 ${name}</h3>
+                                <h3 class="chart-title">🎯 ${escapeHtml(name)} — Frequency, Duration &amp; Intensity</h3>
                                 <div style="display: flex; gap: 8px;">
                                     <button class="chart-expand-btn" onclick="expandChart('bip-${safeId(name)}')">⛶</button>
                                     <button class="chart-print-btn" onclick="printChart('bip-${safeId(name)}')">Print</button>
@@ -4707,6 +4707,9 @@
             if (bipNames.size === 0) return;
 
             const metric = document.querySelector('input[name="metric-bip"]:checked')?.value || 'frequency';
+            const metricLabel = { frequency: 'Frequency', duration: 'Duration (minutes)', intensity: 'Intensity (1–5)' }[metric] || 'Frequency';
+            const titleEl = document.getElementById('bipGoalsTitle');
+            if (titleEl) titleEl.textContent = '🎯 BIP Goals — ' + metricLabel;
             const datasets = Array.from(bipNames).map((goalName) => {
                 const idx = allBipNames.indexOf(goalName); // keep each behavior's color the same when others are hidden
                 const data = days.map(day => {
@@ -4745,7 +4748,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { display: false } }, // the Show behaviors checkboxes act as the key
-                    scales: { y: { min: yRange.min, max: yRange.max, ticks: { stepSize: 1 } } }
+                    scales: { y: { min: yRange.min, max: yRange.max, ticks: { stepSize: 1 }, title: { display: true, text: metricLabel } } }
                 }
             });
         }
@@ -5514,7 +5517,7 @@
                 let body = chartBox('bipGoals', chartTitleFor('bipGoals', 'BIP goals'));
                 visibleBipGoalNames().forEach(name => {
                     const key = 'bip-' + safeId(name);
-                    body += chartBox(key, name);
+                    body += chartBox(key, name + ' — Frequency, Duration & Intensity');
                 });
                 html += section('BIP Goals', body);
             }
