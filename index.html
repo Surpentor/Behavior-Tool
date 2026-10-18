@@ -1085,7 +1085,7 @@
                     <div class="summary-table-wrap" id="summaryTableWrap">
                         <table class="summary-table" id="summaryTable"></table>
                     </div>
-                    <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">Total row — Categories: number of time slots scored 0 (incidents). BIP goals: total frequency and duration.</p>
+                    <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">Average row — BIP goals are averaged only over days the behavior occurred (0s are left out). Total row — Categories: number of time slots scored 0 (incidents). BIP goals: total frequency and duration.</p>
                 </div>
 
                 <!-- Settings Tab -->
@@ -3205,7 +3205,7 @@
                     filteredDays.forEach(day => {
                         const g = day.bipGoals.find(x => x.name === name);
                         const v = g && g[slotsKey] ? g[slotsKey][i] : null;
-                        if (v !== null && v !== undefined) { sum += v; n++; }
+                        if (v !== null && v !== undefined && !(metric === 'intensity' && v === 0)) { sum += v; n++; }
                     });
                     return n ? sum / n : null;
                 })
@@ -4245,11 +4245,10 @@
                 bipNames.forEach(name => {
                     const g = day.bipGoals.find(x => x.name === name);
                     const f = g ? g.frequency : 0, d = g ? g.duration : 0, it = g ? g.intensity : 0;
-                    if (g) {
-                        sums['bipF:' + name] = (sums['bipF:' + name] || 0) + f;
-                        sums['bipD:' + name] = (sums['bipD:' + name] || 0) + d;
-                        sums['bipI:' + name] = (sums['bipI:' + name] || 0) + it;
-                    }
+                    // BIP averages only use days the behavior occurred: zeros are left out
+                    if (f > 0) sums['bipF:' + name] = (sums['bipF:' + name] || 0) + f;
+                    if (d > 0) sums['bipD:' + name] = (sums['bipD:' + name] || 0) + d;
+                    if (it > 0) sums['bipI:' + name] = (sums['bipI:' + name] || 0) + it;
                     row += `<td>${fmt(f)}</td><td>${fmt(d)}</td><td>${fmt(it)}</td>`;
                 });
                 body += `<tr>${row}</tr>`;
@@ -4274,11 +4273,10 @@
                 });
                 bipNames.forEach(name => {
                     const g = day.bipGoals.find(x => x.name === name);
-                    if (g) {
-                        counts['bipF:' + name] = (counts['bipF:' + name] || 0) + 1;
-                        counts['bipD:' + name] = (counts['bipD:' + name] || 0) + 1;
-                        counts['bipI:' + name] = (counts['bipI:' + name] || 0) + 1;
-                    }
+                    if (!g) return;
+                    if (g.frequency > 0) counts['bipF:' + name] = (counts['bipF:' + name] || 0) + 1;
+                    if (g.duration > 0) counts['bipD:' + name] = (counts['bipD:' + name] || 0) + 1;
+                    if (g.intensity > 0) counts['bipI:' + name] = (counts['bipI:' + name] || 0) + 1;
                 });
             });
 
@@ -4603,7 +4601,7 @@
                     },
                     {
                         label: 'Intensity (1–5)',
-                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); return g ? g.intenSlots[slot] : null; }),
+                        data: avgSlots((day, slot) => { const g = day.bipGoals.find(x => x.name === bipName); const v = g ? g.intenSlots[slot] : null; return v === 0 ? null : v; }), // skip 0 intensity
                         backgroundColor: fdiColors().i + 'cc', borderColor: fdiColors().i, borderWidth: 1
                     }
                 ];
@@ -5501,7 +5499,7 @@
                 if (tracking.length) blocks.push({ title: 'Custom Tracking', cols: tracking.map(t => ({ head: t.label, get: d => {
                     const td = d.tracking && d.tracking[t.slot]; return td ? (td.value || 0) : 0; } })) });
                 bipNames.forEach(name => blocks.push({ title: name, cols: ['frequency', 'duration', 'intensity'].map(f => ({
-                    head: f[0].toUpperCase() + f.slice(1), total: f !== 'intensity',
+                    head: f[0].toUpperCase() + f.slice(1), total: f !== 'intensity', skipZero: true,
                     get: d => { const g = d.bipGoals.find(x => x.name === name); return g ? g[f] : 0; } })) }));
 
                 const MAX_COLS = 10;
@@ -5525,7 +5523,7 @@
                         body += `<tr><td>${day.date.toLocaleDateString()}</td>`;
                         cols.forEach((c, i) => {
                             const v = c.get(day);
-                            if (v !== null) { sums[i] += v; counts[i]++; }
+                            if (v !== null && !(c.skipZero && v === 0)) { sums[i] += v; counts[i]++; }
                             body += `<td>${v === null ? '—' : fmt(v)}</td>`;
                         });
                         body += '</tr>';
@@ -5540,6 +5538,7 @@
                     }
                     body += '</tfoot></table></div>';
                 });
+                if (bipNames.length) body = '<p class="note">BIP averages use only the days the behavior occurred (0s are left out).</p>' + body;
                 html += section('Day-by-Day Summary', body, 'page-start');
             }
 
