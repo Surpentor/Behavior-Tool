@@ -589,8 +589,15 @@
         @media (max-width: 900px) { .bip-help { grid-template-columns: 1fr; } }
         .bip-takeaway { background: #fffbeb; border: 1px solid #fcd34d; border-left: 5px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #1e293b; line-height: 1.6; }
         .bip-goal-filter { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; align-items: center; }
-        .bip-goal-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-        .bip-goal-check input { width: 17px; height: 17px; cursor: pointer; }
+        .bip-goal-hint { color: var(--text-secondary); font-size: 0.85rem; }
+        .bip-goal-check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px 8px 10px;
+            border: 2px solid #cbd5e1; border-radius: 10px; background: #f8fafc; color: #64748b; font-weight: 600; user-select: none; }
+        .bip-goal-check.on { border-color: var(--goal-color); background: white; color: #1e293b; }
+        .bip-goal-check:hover { border-color: var(--goal-color); }
+        .bip-goal-check input { width: 20px; height: 20px; cursor: pointer; accent-color: var(--goal-color); margin: 0; }
+        .bip-goal-swatch { display: inline-block; flex-shrink: 0; width: 22px; height: 4px; border-radius: 2px; background: var(--goal-color); }
+        .bip-goal-check:not(.on) .bip-goal-swatch { opacity: 0.35; }
+        .bip-goal-check:not(.on) span:last-child { text-decoration: line-through; }
         .bip-goal-actions button { margin-left: 4px; padding: 3px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
@@ -907,7 +914,7 @@
                             </div>
                         </div>
                         <div class="control-group" id="bipGoalFilterGroup">
-                            <strong>Show behaviors:</strong>
+                            <strong>Show these behaviors</strong> <span class="bip-goal-hint">— tick or untick to add or remove them from the charts below</span>
                             <div id="bipGoalFilter" class="bip-goal-filter"></div>
                         </div>
                     </div>
@@ -4643,20 +4650,33 @@
             });
         }
 
+        // Fixed color per BIP behavior (by its position in the point sheet)
+        function bipGoalColor(idx) {
+            const c = catColors();
+            const order = [c[3], c[2], c[1], ...c.filter((_, i) => i > 3), c[0]];
+            return order[idx % order.length];
+        }
+
         function renderBipGoalFilter() {
             const box = document.getElementById('bipGoalFilter');
             if (!box) return;
             const names = getBipGoalNames();
             document.getElementById('bipGoalFilterGroup').style.display = names.length > 1 ? '' : 'none';
-            box.innerHTML = names.map((n, i) => `<label class="bip-goal-check">
-                    <input type="checkbox" data-goal-idx="${i}" ${hiddenBipGoals.has(n) ? '' : 'checked'} onchange="toggleBipGoal(${i}, this.checked)">
-                    <span>${escapeHtml(n)}</span></label>`).join('') +
+            box.innerHTML = names.map((n, i) => {
+                const on = !hiddenBipGoals.has(n);
+                return `<label class="bip-goal-check${on ? ' on' : ''}" style="--goal-color: ${bipGoalColor(i)};">
+                    <input type="checkbox" data-goal-idx="${i}" ${on ? 'checked' : ''} onchange="toggleBipGoal(${i}, this.checked)">
+                    <span class="bip-goal-swatch" aria-hidden="true"></span>
+                    <span>${escapeHtml(n)}</span></label>`;
+            }).join('') +
                 (names.length > 2 ? `<span class="bip-goal-actions"><button type="button" onclick="setAllBipGoals(true)">All</button><button type="button" onclick="setAllBipGoals(false)">None</button></span>` : '');
         }
 
         function toggleBipGoal(idx, on) {
             const name = getBipGoalNames()[idx];
             if (on) hiddenBipGoals.delete(name); else hiddenBipGoals.add(name);
+            renderBipGoalFilter();
+            document.querySelector(`#bipGoalFilter input[data-goal-idx="${idx}"]`)?.focus();
             updateBipGoalsChart();
             updateIndividualBipCharts();
         }
@@ -4702,12 +4722,11 @@
                     })();
                     return Math.round(val);
                 });
-                const colors = (c => [c[3], c[2], c[1]])(catColors());
                 return {
                     label: goalName,
                     data,
-                    borderColor: colors[idx % colors.length],
-                    backgroundColor: colors[idx % colors.length] + '20',
+                    borderColor: bipGoalColor(idx),
+                    backgroundColor: bipGoalColor(idx) + '20',
                     tension: 0.4, cubicInterpolationMode: 'monotone',
                     fill: false,
                     borderWidth: 2
@@ -4725,7 +4744,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    plugins: { legend: { position: 'top' } },
+                    plugins: { legend: { display: false } }, // the Show behaviors checkboxes act as the key
                     scales: { y: { min: yRange.min, max: yRange.max, ticks: { stepSize: 1 } } }
                 }
             });
