@@ -588,6 +588,10 @@
         .bip-help p { margin: 4px 0 0; }
         @media (max-width: 900px) { .bip-help { grid-template-columns: 1fr; } }
         .bip-takeaway { background: #fffbeb; border: 1px solid #fcd34d; border-left: 5px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #1e293b; line-height: 1.6; }
+        .bip-goal-filter { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; align-items: center; }
+        .bip-goal-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        .bip-goal-check input { width: 17px; height: 17px; cursor: pointer; }
+        .bip-goal-actions button { margin-left: 4px; padding: 3px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .hotspot-key { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; }
         .summary-table-wrap {
             overflow-x: auto;
@@ -902,6 +906,10 @@
                                 </label>
                             </div>
                         </div>
+                        <div class="control-group" id="bipGoalFilterGroup">
+                            <strong>Show behaviors:</strong>
+                            <div id="bipGoalFilter" class="bip-goal-filter"></div>
+                        </div>
                     </div>
 
                     <div class="charts-grid">
@@ -913,6 +921,7 @@
                                     <button class="chart-print-btn" onclick="printChart('bipGoals')">Print</button>
                                 </div>
                             </div>
+                            <p id="bipGoalsEmpty" class="empty-message" style="display: none;">No behaviors selected. Tick one or more under “Show behaviors” above.</p>
                             <canvas id="bipGoals"></canvas>
                         </div>
                     </div>
@@ -1304,6 +1313,7 @@
         let allCategoryNames = [];
         let enabledCategories = new Set();
         let hiddenTrackingSlots = new Set();
+        let hiddenBipGoals = new Set(); // BIP behaviors unchecked on the BIP Goals tab
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -1804,6 +1814,7 @@
 
             // Build tracking visibility checkboxes
             hiddenTrackingSlots = new Set();
+            hiddenBipGoals = new Set();
             const trackingMeta = studentData.trackingMeta || [];
             if (trackingMeta.length > 0) {
                 const panel = document.getElementById('trackingVisibilityPanel');
@@ -4632,21 +4643,52 @@
             });
         }
 
+        function renderBipGoalFilter() {
+            const box = document.getElementById('bipGoalFilter');
+            if (!box) return;
+            const names = getBipGoalNames();
+            document.getElementById('bipGoalFilterGroup').style.display = names.length > 1 ? '' : 'none';
+            box.innerHTML = names.map((n, i) => `<label class="bip-goal-check">
+                    <input type="checkbox" data-goal-idx="${i}" ${hiddenBipGoals.has(n) ? '' : 'checked'} onchange="toggleBipGoal(${i}, this.checked)">
+                    <span>${escapeHtml(n)}</span></label>`).join('') +
+                (names.length > 2 ? `<span class="bip-goal-actions"><button type="button" onclick="setAllBipGoals(true)">All</button><button type="button" onclick="setAllBipGoals(false)">None</button></span>` : '');
+        }
+
+        function toggleBipGoal(idx, on) {
+            const name = getBipGoalNames()[idx];
+            if (on) hiddenBipGoals.delete(name); else hiddenBipGoals.add(name);
+            updateBipGoalsChart();
+            updateIndividualBipCharts();
+        }
+
+        function setAllBipGoals(on) {
+            hiddenBipGoals = on ? new Set() : new Set(getBipGoalNames());
+            renderBipGoalFilter();
+            updateBipGoalsChart();
+            updateIndividualBipCharts();
+        }
+
+        function visibleBipGoalNames() {
+            return getBipGoalNames().filter(n => !hiddenBipGoals.has(n));
+        }
+
         function updateBipGoalsChart() {
             const canvas = document.getElementById('bipGoals');
             if (!canvas) return;
-            if (charts.bipGoals) charts.bipGoals.destroy();
+            if (charts.bipGoals) { charts.bipGoals.destroy(); delete charts.bipGoals; }
 
             const days = filteredDays || studentData.days;
-            const bipNames = new Set();
-            days.forEach(day => {
-                day.bipGoals.forEach(goal => bipNames.add(goal.name));
-            });
-
+            renderBipGoalFilter();
+            const allBipNames = getBipGoalNames();
+            const bipNames = new Set(visibleBipGoalNames());
+            const emptyMsg = document.getElementById('bipGoalsEmpty');
+            if (emptyMsg) emptyMsg.style.display = allBipNames.length && bipNames.size === 0 ? '' : 'none';
+            canvas.style.display = bipNames.size === 0 ? 'none' : '';
             if (bipNames.size === 0) return;
 
             const metric = document.querySelector('input[name="metric-bip"]:checked')?.value || 'frequency';
-            const datasets = Array.from(bipNames).map((goalName, idx) => {
+            const datasets = Array.from(bipNames).map((goalName) => {
+                const idx = allBipNames.indexOf(goalName); // keep each behavior's color the same when others are hidden
                 const data = days.map(day => {
                     const goal = day.bipGoals.find(g => g.name === goalName);
                     if (!goal) return 0;
@@ -4739,7 +4781,10 @@
                 const canvas = document.getElementById('bip-' + safeId(name));
                 if (!canvas) return;
                 const key = 'bip-' + safeId(name);
-                if (charts[key]) charts[key].destroy();
+                if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+                const box = canvas.closest('.chart-container');
+                if (box) box.style.display = hiddenBipGoals.has(name) ? 'none' : '';
+                if (hiddenBipGoals.has(name)) return;
 
                 const freq = [], dur = [], inten = [];
                 days.forEach(day => {
@@ -5448,7 +5493,7 @@
             }
             if (chosen.has('bip')) {
                 let body = chartBox('bipGoals', chartTitleFor('bipGoals', 'BIP goals'));
-                getBipGoalNames().forEach(name => {
+                visibleBipGoalNames().forEach(name => {
                     const key = 'bip-' + safeId(name);
                     body += chartBox(key, name);
                 });
@@ -5600,6 +5645,7 @@
             studentData = null;
             filteredDays = null;
             hiddenTrackingSlots = new Set();
+            hiddenBipGoals = new Set();
             document.getElementById('fileInput').value = '';
             document.getElementById('uploadSection').style.display = 'block';
             document.getElementById('dashboard').classList.remove('active');

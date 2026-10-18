@@ -19,7 +19,7 @@ Needs internet access to load two libraries from jsDelivr:
    - **Insights** – overall average trend (peaks/valleys highlighted) and category averages
    - **Categories** – per-category trend and performance charts (the category checkboxes here only filter this tab)
    - **Time-of-Day** – average score per time slot
-   - **BIP Goals** – frequency, duration and intensity per goal
+   - **BIP Goals** – frequency, duration and intensity per goal; tick which behaviors to show (the full report follows the same selection)
    - **Custom Tracking** – the three free-form tracking rows
    - **Heatmap** – time-slot, category, average and daily-summary heatmaps, plus **BIP Hotspots**: time slots and weekdays where a behavior keeps recurring. Time-slot % = of the days the behavior happened, the share where it happened in that slot (blank slot = didn't happen). Weekday % = share of those weekdays it happened, flagged only if 15+ points above its overall rate. Thresholds are adjustable (default 33% and 3+ days), and the view includes a built-in how-to and three BIP views: by time of day (one goal), time-slot averages (all goals) and daily totals. BIP colors run pale (0 = did not occur) to dark red (highest); grey means nothing was recorded. The time-slot BIP views need BIP numbers in the slot cells (B–Z); the daily view uses the totals column.
    - **Date Comparison** – compare chosen days side by side
